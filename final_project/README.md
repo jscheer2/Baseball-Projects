@@ -1,0 +1,1 @@
+Here I have my final project from my Baseball Analytics class that I took my last semester at college. Here I did a deep dive breakdown on the 2023 Padres and particularly on how they collapsed from a preseason contender to barely an above .500 team.

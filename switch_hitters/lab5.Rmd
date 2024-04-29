@@ -1,0 +1,115 @@
+---
+title: "Switch Hitters"
+author: "Jason Scheer"
+date: "2024-04-15"
+output: pdf_document
+---
+
+
+```{r}
+# Setup code
+
+library(readr)
+library(tidyverse)
+library(ggplot2)
+switch = read_csv("switch.csv")
+
+switch2 = switch |> 
+  mutate(pa_id = paste(game_date, away_team, home_team, at_bat_number), 
+         H = ifelse(events %in% 
+                      c("single", "double", "triple", "home_run"), 1, 0), 
+         O = ifelse(events %in%
+                      c("double_play", "field_error", "field_out", "fielders_choice_out", "force_out", "grounded_into_double_play", "other_out", "strikeout", "strikeout_double_play", "triple_play"), 1, 0),
+         BB = ifelse(events %in% 
+                       c("walk", "hit_by_pitch"), 1, 0),
+         Sac = ifelse(events %in%
+                        c("sac_fly", "sac_bunt"), 1, 0)) |> 
+  group_by(batter_name, stand, game_year) |> 
+  summarise(
+    Hit = sum(H),
+    Out = sum(O),
+    BB = sum(BB),
+    Sac = sum(Sac),
+    PA = Hit + BB + Sac + Out,  
+    OBP = round((sum(Hit) + sum(BB)) / sum(PA), digits = 3),
+    .groups = "keep"
+  ) |> 
+  group_by(batter_name) |> 
+  mutate(
+    total_PA_left = sum(PA[stand == "L"]),
+    total_PA_right = sum(PA[stand == "R"])
+  ) |> 
+  ungroup() |> 
+  filter(total_PA_left >= 100 & total_PA_right >= 100) |> 
+  filter(PA >= 100)
+
+league_avg_obp = data.frame(
+  year = c(2017, 2018, 2019, 2021, 2022),
+  OBP_avg = c(0.324, 0.318, 0.323, 0.317, 0.312)
+)
+
+switch_with_avg = merge(switch2, league_avg_obp, by.x = "game_year", by.y = "year", all.x = TRUE)
+
+
+obp = switch_with_avg |> 
+  select(c("batter_name", "stand", "game_year", "OBP", "OBP_avg")) |> 
+  arrange(batter_name)
+
+unique_batters = unique(obp$batter_name)
+
+```
+
+
+
+
+
+
+
+```{r}
+library(shiny)
+
+# UI
+ui = navbarPage(
+  title = "Switch Hitting Advantage or Disadvantage?",
+  tabPanel(
+    title = "Visualization",
+    titlePanel(title = "Switch Hitting OBP Data 2017-2022"),
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(
+          inputId = "batter",
+          label = "Batter:",
+          choices  = unique_batters,
+          selected = "Ian Happ"),
+      ),
+      mainPanel(plotOutput("plot"))
+    )
+    
+  ),
+  tabPanel(title = "About", includeMarkdown("This Shiny App looks at players who have at least 100 PAs as a righty and as a lefty and compares their seasonal OBP to the league average OBP. The purpose of this is to see if being a switch hitter is actually beneifical for the hitter or if they might be better off just sticking to working on getting better at just one side of the plate. Unfortuantely I could only obtain this data from statcast so it is only from 2017-2022 seasons, so we can only see current and recently retired switch hitters. The data is setup where the bars are the OBP as a lefty and righty from 2017-2022 for everyone that had enough switch hitting PAs. The dashed line is the league average OBP for each season. There are a few players that will have just one stand in their graph because of not having enough plate appearances to make the threshold for both stands. Also I apologize for the double league average OBP above each year. I could only get it to show for each stand instead for each year."))
+)
+
+# Server
+server = function(input, output) {
+  
+  
+output$plot = renderPlot({
+  filtered_obp = obp[obp$batter_name == input$batter, ]
+  
+  ggplot(data = filtered_obp, aes(x = game_year, y = OBP, fill = stand, color = stand)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    geom_text(aes(label = round(OBP, 3)), position = position_dodge(width = 0.9), vjust = 1.2, size = 3, color = "black") +
+    geom_line(aes(x = game_year, y = OBP_avg, group = 1), data = filtered_obp, color = "darkblue", linetype = "dashed") +
+    geom_point(aes(x = game_year, y = OBP_avg), data = filtered_obp, color = "darkblue", size = 2) +  
+    geom_text(aes(label = round(OBP_avg, 3)), data = filtered_obp, vjust = -0.3, size = 3, color = "darkblue", nudge_y = 0.03) +
+    scale_y_continuous(labels = function(x) round(x, 3)) +  
+    labs(x = "Year", y = "OBP", fill = "Stand", color = "Stand") +
+    theme_bw()
+})
+
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+

@@ -1,0 +1,973 @@
+---
+title: "Final Project"
+author: "Jason Scheer"
+output: pdf_document
+date: "2024-04-09"
+---
+
+```{r}
+# Load libraries
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+
+Here I downloaded csv files from Baseball Reference 2023 Team Data to look at how the Padres compared to every other team and against the league average in defense, pitching, batting, and war for each position group
+
+
+```{r}
+# Load in csv files
+defense_2023 = read_csv("defense_2023.csv") |> 
+  filter(Tm != "NA")
+war_2023 = read_csv("war_2023.csv")
+pitch_2023 = read_csv("pitch_2023.csv")|> 
+  filter(Tm != "NA")
+bat_2023 = read_csv("bat_2023.csv") |> 
+  filter(Tm != "NA")
+```
+
+
+
+
+```{r}
+# Trimming this down to Padres versus league average 
+padres_bat = bat_2023 |> 
+  filter(Tm == "San Diego Padres" | Tm == "League Average")
+
+head(padres_bat)
+```
+
+
+The Padres are only significantly under league average in 3B, GIDP and a little under LOB
+
+
+
+
+```{r}
+# Trimming this down to Padres versus league average while getting rid of a column that had a Unicode variable that wouldn't knit
+padres_pitch = pitch_2023 |> 
+  select(-24) |> 
+  filter(Tm == "San Diego Padres" | Tm == "League Average")
+
+head(padres_pitch)
+```
+
+
+The Padres are only worse than league average in W-L%, SV, Walks, and BB9. They also were better than league average in SO/Walk ratio.
+
+
+```{r}
+# Triming this down to Padres versus league average 
+padres_defense = defense_2023 |> 
+  filter(Tm == "San Diego Padres" | Tm == "League Average")
+
+head(padres_defense)
+```
+
+The Padres are only worse than league average in DP.
+
+
+```{r}
+# Showing WAR and ranking for each position
+war_2023
+```
+
+Based off of WAR rankings, they were ranked 9th total, 12th in all Pitching, 5th in SP, 22nd in RP, 11th in C, 23rd in 1B, 7th in 2nd, 8th in 3B, 6th in SS, 3rd in OF, and 20th in DH.
+
+
+So Based off of all of these stats, they should've been a good, if not great team, like the preseason media polls and power rankings predicted. Let's see what the Pythagorem Winning Percentage shows.
+
+
+```{r}
+# Create the Pythagorem Win Percentage 
+R = padres_bat$R[1]
+RA = padres_pitch$R[2]
+
+pyth = round((R ^ 2) / ( (R ^ 2) + (RA ^ 2)) * 162, digits = 2)
+cat("The Pythagorem Winning Percentage equation estimates they shouldve won:", pyth, "games")
+```
+
+```{r}
+actual_wins = round(padres_pitch$`W-L%`[2] * 162, digits = 0)
+cat("The Padres actually won:", actual_wins, "games")
+```
+
+
+
+So they were projected to win roughly 93 games but only ended up winning 82 games. In both leagues, 93 wins would've been enough to get them in the playoffs. Based off of everything so far, nothing seems to show how they lost 11 more games than they should've. There's a couple splits I want to look at that could be the problem. First I want to see if their home/away splits were really good or really bad in either pitching or hitting. Secondly, I want to see if injuries to some of their star players could've skewed the Runs/RA data. Lastly, I want to see the monthly breakdown to see if maybe they just had a really good start to the season that skewed numbers or vice versa with the end of the season. 
+
+
+
+
+# Home/Away Splits ------------------------------------------------------------------------
+
+
+
+
+```{r}
+# Download retrosheet library and download their 2023 games
+library(retrosheet)
+
+padres_games = getRetrosheet("game", 2023) |> 
+  filter(VisTm == "SDN" | HmTm == "SDN")
+
+# Get their home wins/losses and away wins/losses
+home_wins = padres_games |> 
+  filter(HmTm == "SDN" & HmRuns > VisRuns) |> 
+  summarise(wins = n())
+
+home_losses = padres_games |> 
+  filter(HmTm == "SDN" & HmRuns < VisRuns) |> 
+  summarise(losses = n())
+
+away_wins = padres_games |> 
+  filter(VisTm == "SDN" & HmRuns < VisRuns) |> 
+  summarise(wins = n())
+
+away_losses = padres_games |> 
+  filter(VisTm == "SDN" & HmRuns > VisRuns) |> 
+  summarise(losses = n())
+
+cat("The Padres home record was", home_wins$wins, "wins and", home_losses$losses, "losses
+")
+cat("The Padres away record was", away_wins$wins, "wins and", away_losses$losses, "losses")
+```
+
+
+Based off of this, it seems like their home and away record isn't anything that could explain the bad record
+
+
+
+
+# Injuries/Suspended/Days off---------------------------------------------------------------
+
+
+
+I'm interested to see if maybe in games without Tatis, Machado, Bogaerts, or Soto has any affect on their record and could explain why they lost so many games. So I will compare their winning percentage with all four of them starting and without at least 1 of them there.
+
+
+
+```{r}
+# Filtered games so that all 4 had to be in the starting lineup and unfortunately had to go by anywhere in the lineup so it's some hefty code
+games_with_all = padres_games |> 
+  filter( (VisBat1Nm == "Fernando Tatis" | VisBat2Nm == "Fernando Tatis" | VisBat3Nm == "Fernando Tatis" | VisBat4Nm == "Fernando Tatis" | VisBat5Nm == "Fernando Tatis" | VisBat6Nm == "Fernando Tatis" | VisBat7Nm == "Fernando Tatis" | VisBat8Nm == "Fernando Tatis" | VisBat9Nm == "Fernando Tatis" | HmBat1Nm == "Fernando Tatis" | HmBat2Nm == "Fernando Tatis" | HmBat3Nm == "Fernando Tatis" | HmBat4Nm == "Fernando Tatis" | HmBat5Nm == "Fernando Tatis" | HmBat6Nm == "Fernando Tatis" | HmBat7Nm == "Fernando Tatis" | HmBat8Nm == "Fernando Tatis" | HmBat9Nm == "Fernando Tatis") & (VisBat1Nm == "Juan Soto" | VisBat2Nm == "Juan Soto" | VisBat3Nm == "Juan Soto" | VisBat4Nm == "Juan Soto" | VisBat5Nm == "Juan Soto" | VisBat6Nm == "Juan Soto" | VisBat7Nm == "Juan Soto" | VisBat8Nm == "Juan Soto" | VisBat9Nm == "Juan Soto" | HmBat1Nm == "Juan Soto" | HmBat2Nm == "Juan Soto" | HmBat3Nm == "Juan Soto" | HmBat4Nm == "Juan Soto" | HmBat5Nm == "Juan Soto" | HmBat6Nm == "Juan Soto" | HmBat7Nm == "Juan Soto" | HmBat8Nm == "Juan Soto" | HmBat9Nm == "Juan Soto") & (VisBat1Nm == "Manny Machado" | VisBat2Nm == "Manny Machado" | VisBat3Nm == "Manny Machado" | VisBat4Nm == "Manny Machado" | VisBat5Nm == "Manny Machado" | VisBat6Nm == "Manny Machado" | VisBat7Nm == "Manny Machado" | VisBat8Nm == "Manny Machado" | VisBat9Nm == "Manny Machado" | HmBat1Nm == "Manny Machado" | HmBat2Nm == "Manny Machado" | HmBat3Nm == "Manny Machado" | HmBat4Nm == "Manny Machado" | HmBat5Nm == "Manny Machado" | HmBat6Nm == "Manny Machado" | HmBat7Nm == "Manny Machado" | HmBat8Nm == "Manny Machado" | HmBat9Nm == "Manny Machado") & (VisBat1Nm == "Xander Bogaerts" | VisBat2Nm == "Xander Bogaerts" | VisBat3Nm == "Xander Bogaerts" | VisBat4Nm == "Xander Bogaerts" | VisBat5Nm == "Xander Bogaerts" | VisBat6Nm == "Xander Bogaerts" | VisBat7Nm == "Xander Bogaerts" | VisBat8Nm == "Xander Bogaerts" | VisBat9Nm == "Xander Bogaerts" | HmBat1Nm == "Xander Bogaerts" | HmBat2Nm == "Xander Bogaerts" | HmBat3Nm == "Xander Bogaerts" | HmBat4Nm == "Xander Bogaerts" | HmBat5Nm == "Xander Bogaerts" | HmBat6Nm == "Xander Bogaerts" | HmBat7Nm == "Xander Bogaerts" | HmBat8Nm == "Xander Bogaerts" | HmBat9Nm == "Xander Bogaerts") )
+
+# Finding games where they won/loss with and without all 4 playing
+win_all = games_with_all |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+
+lose_all = games_with_all |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+
+win_pct_with_all = win_all$wins / (win_all$wins + lose_all$losses)
+total_win_pct = round(82 / 162, digits = 2)
+
+cat("With all four of their best position players, the Padres won", win_pct_with_all * 100, "% of their games while having a", total_win_pct * 100, "% win pecentage for the entire season")
+```
+
+
+
+
+So this data seems to suggest that in games where they were missing at least 1 of their top 4 offensive hitters, they had a pretty similar win percentage. I'm going to look into parts of the season where they were missing one of their main starting pitchers or Josh Hader (just because he is that good) and see if they lost more games when they were out. 
+
+
+For the pitchers, Snell didn't miss any time, Yu Darvish missed all of September, Michael Wacha missed a month and a half from July 1st to August 15th, Seth Lugo missed a month from May 16th to June 20th, Musgrove didn't start till April 22nd and didn't pitch after July 28th and Hader didn't miss any significant time. I'll use retrosheet to see the win percentage during each stint without each pitcher and see if it was much different.
+
+
+
+```{r}
+# filter games by dates these pitchers where out
+games_without_darvish = padres_games |> 
+  filter(Date >= 20230901)
+games_without_wacha = padres_games |> 
+  filter(Date > 20230701 & Date < 20230815)
+games_without_lugo = padres_games |> 
+  filter(Date > 20230516 & Date < 20230620)
+games_without_musgrove = padres_games |> 
+  filter(Date < 20230423 | Date > 20230729)
+
+
+# Find win percentage during times with and without each pitcher
+win_no_darvish = games_without_darvish |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_no_darvish = games_without_darvish |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_without_darvish = win_no_darvish$wins / (win_no_darvish$wins + lose_no_darvish$losses)
+
+
+win_no_wacha = games_without_wacha |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_no_wacha = games_without_wacha |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_without_wacha = win_no_wacha$wins / (win_no_wacha$wins + lose_no_wacha$losses)
+
+
+win_no_lugo = games_without_lugo |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_no_lugo = games_without_lugo |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_without_lugo = win_no_lugo$wins / (win_no_lugo$wins + lose_no_lugo$losses)
+
+
+win_no_musgrove = games_without_musgrove |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_no_musgrove = games_without_musgrove |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_without_musgrove = win_no_musgrove$wins / (win_no_musgrove$wins + lose_no_musgrove$losses)
+
+cat("The win percentage without Yu Darvish was", round(win_pct_without_darvish * 100, digits = 2), "%, the win percentage without Michael Wacha was", round(win_pct_without_wacha * 100, digits = 2), "%, the win percentage without Seth Lugo was", round(win_pct_without_lugo * 100, digits = 2), "%, the win percentage without Joe Musgove was", round(win_pct_without_musgrove * 100, digits = 2), "%, and the season win percentage was", total_win_pct * 100, "%")
+```
+
+
+Based off of this we can conlcude that with the batters and pitchers missing games throughout the season, it had zero affect on winning percentage except for Yu Darvish who actually hurt the team's winning percentage which makes sense since he didn't have a good season.
+
+
+
+
+
+# Montly Breakdown -------------------------------------------------------------------------
+
+
+Now I'm going to look at the monthly win percent to see if maybe they just had really good months to cover up their bad months.
+
+
+```{r}
+# Filter games into each month
+march_games = padres_games |> 
+  filter(Date >= 20230301 & Date < 20230401) # Two games
+april_games = padres_games |> 
+  filter(Date >= 20230401 & Date < 20230501)
+may_games = padres_games |> 
+  filter(Date >= 20230501 & Date < 20230601)
+june_games = padres_games |> 
+  filter(Date >= 20230601 & Date < 20230701)
+july_games = padres_games |> 
+  filter(Date >= 20230701 & Date < 20230801)
+august_games = padres_games |> 
+  filter(Date >= 20230801 & Date < 20230901)
+september_games = padres_games |> 
+  filter(Date >= 20230901 & Date < 20231001)
+october_games = padres_games |> 
+  filter(Date >= 20231001 & Date < 20231101) # One non-playoff game
+
+# Find win loss percentage for each month
+win_march = march_games |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_march = march_games |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_march = win_march$wins / (win_march$wins + lose_march$losses)
+
+
+win_april = april_games |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_april = april_games |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_april = win_april$wins / (win_april$wins + lose_april$losses)
+
+
+win_may = may_games |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_may = may_games |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_may = win_may$wins / (win_may$wins + lose_may$losses)
+
+
+win_june = june_games |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_june = june_games |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_june = win_june$wins / (win_june$wins + lose_june$losses)
+
+
+win_july = july_games |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_july = july_games |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_july = win_july$wins / (win_july$wins + lose_july$losses)
+
+
+win_august = august_games |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_august = august_games |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_august = win_august$wins / (win_august$wins + lose_august$losses)
+
+
+win_september = september_games |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_september = september_games |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_september = win_september$wins / (win_september$wins + lose_september$losses)
+
+
+win_october = october_games |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_october = october_games |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_october = win_october$wins / (win_october$wins + lose_october$losses)
+
+
+
+cat("The win percentage in the month of March was", round(win_pct_march * 100, digits = 2),"% (in two games) \n")
+cat("The win percentage in the month of April was", round(win_pct_april * 100, digits = 2),"%\n")
+cat("The win percentage in the month of May was", round(win_pct_may * 100, digits = 2),"%\n")
+cat("The win percentage in the month of June was", round(win_pct_june * 100, digits = 2),"%\n")
+cat("The win percentage in the month of July was", round(win_pct_july * 100, digits = 2),"%\n")
+cat("The win percentage in the month of August was", round(win_pct_august * 100, digits = 2),"%\n")
+cat("The win percentage in the month of September was", round(win_pct_september * 100, digits = 2),"%\n")
+cat("The win percentage in the month of October was", round(win_pct_october * 100, digits = 2),"% (in one game)\n")
+```
+
+So here we have 2 months that were really bad months and 1 more month that is bad but not terrible. Is this average for playoff teams to have a couple down months? They did have a very good July and September as well, so could this be the reason why they did worse than they were predicted to? Let's take a look at some another top preseason teams and see if they had similar months. I'm choosing the Houston Astros, the Philadelphia Phillies, and the Toronto Blue Jays. 
+
+
+```{r}
+# Get games for each team
+astros_games = getRetrosheet("game", 2023) |> 
+  filter(VisTm == "HOU" | HmTm == "HOU")
+
+phillies_games = getRetrosheet("game", 2023) |> 
+  filter(VisTm == "PHI" | HmTm == "PHI")
+
+jays_games = getRetrosheet("game", 2023) |> 
+  filter(VisTm == "TOR" | HmTm == "TOR")
+```
+
+
+```{r}
+# Do monthly breakdowns for each team
+march_games_astros = astros_games |> 
+  filter(Date >= 20230301 & Date < 20230401) # Two games
+april_games_astros = astros_games |> 
+  filter(Date >= 20230401 & Date < 20230501)
+may_games_astros = astros_games |> 
+  filter(Date >= 20230501 & Date < 20230601)
+june_games_astros = astros_games |> 
+  filter(Date >= 20230601 & Date < 20230701)
+july_games_astros = astros_games |> 
+  filter(Date >= 20230701 & Date < 20230801)
+august_games_astros = astros_games |> 
+  filter(Date >= 20230801 & Date < 20230901)
+september_games_astros = astros_games |> 
+  filter(Date >= 20230901 & Date < 20231001)
+october_games_astros = astros_games |> 
+  filter(Date >= 20231001 & Date < 20231101) # One non-playoff game
+
+
+win_march_astros = march_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns > HmRuns) | (HmTm == "HOU" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_march_astros = march_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns < HmRuns) | (HmTm == "HOU" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_march_astros = win_march_astros$wins / (win_march_astros$wins + lose_march_astros$losses)
+
+
+win_april_astros = april_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns > HmRuns) | (HmTm == "HOU" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_april_astros = april_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns < HmRuns) | (HmTm == "HOU" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_april_astros = win_april_astros$wins / (win_april_astros$wins + lose_april_astros$losses)
+
+
+win_may_astros = may_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns > HmRuns) | (HmTm == "HOU" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_may_astros = may_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns < HmRuns) | (HmTm == "HOU" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_may_astros = win_may_astros$wins / (win_may_astros$wins + lose_may_astros$losses)
+
+
+win_june_astros = june_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns > HmRuns) | (HmTm == "HOU" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_june_astros = june_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns < HmRuns) | (HmTm == "HOU" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_june_astros = win_june_astros$wins / (win_june_astros$wins + lose_june_astros$losses)
+
+
+win_july_astros = july_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns > HmRuns) | (HmTm == "HOU" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_july_astros = july_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns < HmRuns) | (HmTm == "HOU" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_july_astros = win_july_astros$wins / (win_july_astros$wins + lose_july_astros$losses)
+
+
+win_august_astros = august_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns > HmRuns) | (HmTm == "HOU" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_august_astros = august_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns < HmRuns) | (HmTm == "HOU" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_august_astros = win_august_astros$wins / (win_august_astros$wins + lose_august_astros$losses)
+
+
+win_september_astros = september_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns > HmRuns) | (HmTm == "HOU" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_september_astros = september_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns < HmRuns) | (HmTm == "HOU" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_september_astros = win_september_astros$wins / (win_september_astros$wins + lose_september_astros$losses)
+
+
+win_october_astros = october_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns > HmRuns) | (HmTm == "HOU" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_october_astros = october_games_astros |> 
+  filter( (VisTm == "HOU" & VisRuns < HmRuns) | (HmTm == "HOU" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_october_astros = win_october_astros$wins / (win_october_astros$wins + lose_october_astros$losses)
+
+
+cat("The win percentage of the Astros in the month of March was", round(win_pct_march_astros * 100, digits = 2),"% (in two games) \n")
+cat("The win percentage of the Astros in the month of April was", round(win_pct_april_astros * 100, digits = 2),"%\n")
+cat("The win percentage of the Astros in the month of May was", round(win_pct_may_astros * 100, digits = 2),"%\n")
+cat("The win percentage of the Astros in the month of June was", round(win_pct_june_astros * 100, digits = 2),"%\n")
+cat("The win percentage of the Astros in the month of July was", round(win_pct_july_astros * 100, digits = 2),"%\n")
+cat("The win percentage of the Astros in the month of August was", round(win_pct_august_astros * 100, digits = 2),"%\n")
+cat("The win percentage  of the Astrosin the month of September was", round(win_pct_september_astros * 100, digits = 2),"%\n")
+cat("The win percentage of the Astros in the month of October was", round(win_pct_october_astros * 100, digits = 2),"% (in one game)\n")
+```
+
+```{r}
+# Do monthly breakdowns for each team
+march_games_phillies = phillies_games |> 
+  filter(Date >= 20230301 & Date < 20230401) # One games
+april_games_phillies = phillies_games |> 
+  filter(Date >= 20230401 & Date < 20230501)
+may_games_phillies = phillies_games |> 
+  filter(Date >= 20230501 & Date < 20230601)
+june_games_phillies = phillies_games |> 
+  filter(Date >= 20230601 & Date < 20230701)
+july_games_phillies = phillies_games |> 
+  filter(Date >= 20230701 & Date < 20230801)
+august_games_phillies = phillies_games |> 
+  filter(Date >= 20230801 & Date < 20230901)
+september_games_phillies = phillies_games |> 
+  filter(Date >= 20230901 & Date < 20231001)
+october_games_phillies = phillies_games |> 
+  filter(Date >= 20231001 & Date < 20231101) # One non-playoff game
+
+
+win_march_phillies = march_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns > HmRuns) | (HmTm == "PHI" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_march_phillies = march_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns < HmRuns) | (HmTm == "PHI" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_march_phillies = win_march_phillies$wins / (win_march_phillies$wins + lose_march_phillies$losses)
+
+
+win_april_phillies = april_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns > HmRuns) | (HmTm == "PHI" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_april_phillies = april_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns < HmRuns) | (HmTm == "PHI" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_april_phillies = win_april_phillies$wins / (win_april_phillies$wins + lose_april_phillies$losses)
+
+
+win_may_phillies = may_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns > HmRuns) | (HmTm == "PHI" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_may_phillies = may_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns < HmRuns) | (HmTm == "PHI" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_may_phillies = win_may_phillies$wins / (win_may_phillies$wins + lose_may_phillies$losses)
+
+
+win_june_phillies = june_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns > HmRuns) | (HmTm == "PHI" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_june_phillies = june_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns < HmRuns) | (HmTm == "PHI" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_june_phillies = win_june_phillies$wins / (win_june_phillies$wins + lose_june_phillies$losses)
+
+
+win_july_phillies = july_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns > HmRuns) | (HmTm == "PHI" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_july_phillies = july_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns < HmRuns) | (HmTm == "PHI" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_july_phillies = win_july_phillies$wins / (win_july_phillies$wins + lose_july_phillies$losses)
+
+
+win_august_phillies = august_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns > HmRuns) | (HmTm == "PHI" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_august_phillies = august_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns < HmRuns) | (HmTm == "PHI" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_august_phillies = win_august_phillies$wins / (win_august_phillies$wins + lose_august_phillies$losses)
+
+
+win_september_phillies = september_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns > HmRuns) | (HmTm == "PHI" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_september_phillies = september_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns < HmRuns) | (HmTm == "PHI" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_september_phillies = win_september_phillies$wins / (win_september_phillies$wins + lose_september_phillies$losses)
+
+
+win_october_phillies = october_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns > HmRuns) | (HmTm == "PHI" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_october_phillies = october_games_phillies |> 
+  filter( (VisTm == "PHI" & VisRuns < HmRuns) | (HmTm == "PHI" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_october_phillies = win_october_phillies$wins / (win_october_phillies$wins + lose_october_phillies$losses)
+
+
+cat("The win percentage of the Phillies in the month of March was", round(win_pct_march_phillies * 100, digits = 2),"% (in one game) \n")
+cat("The win percentage of the Phillies in the month of April was", round(win_pct_april_phillies * 100, digits = 2),"%\n")
+cat("The win percentage of the Phillies in the month of May was", round(win_pct_may_phillies * 100, digits = 2),"%\n")
+cat("The win percentage of the Phillies in the month of June was", round(win_pct_june_phillies * 100, digits = 2),"%\n")
+cat("The win percentage of the Phillies in the month of July was", round(win_pct_july_phillies * 100, digits = 2),"%\n")
+cat("The win percentage of the Phillies in the month of August was", round(win_pct_august_phillies * 100, digits = 2),"%\n")
+cat("The win percentage of the Phillies in the month of September was", round(win_pct_september_phillies * 100, digits = 2),"%\n")
+cat("The win percentage of the Phillies in the month of October was", round(win_pct_october_phillies * 100, digits = 2),"% (in one game)\n")
+```
+
+```{r}
+# Do monthly breakdowns for each team
+march_games_jays = jays_games |> 
+  filter(Date >= 20230301 & Date < 20230401) # One game
+april_games_jays = jays_games |> 
+  filter(Date >= 20230401 & Date < 20230501)
+may_games_jays = jays_games |> 
+  filter(Date >= 20230501 & Date < 20230601)
+june_games_jays = jays_games |> 
+  filter(Date >= 20230601 & Date < 20230701)
+july_games_jays = jays_games |> 
+  filter(Date >= 20230701 & Date < 20230801)
+august_games_jays = jays_games |> 
+  filter(Date >= 20230801 & Date < 20230901)
+september_games_jays = jays_games |> 
+  filter(Date >= 20230901 & Date < 20231001)
+october_games_jays = jays_games |> 
+  filter(Date >= 20231001 & Date < 20231101) # One non-playoff game
+
+
+win_march_jays = march_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns > HmRuns) | (HmTm == "TOR" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_march_jays = march_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns < HmRuns) | (HmTm == "TOR" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_march_jays = win_march_jays$wins / (win_march_jays$wins + lose_march_jays$losses)
+
+
+win_april_jays = april_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns > HmRuns) | (HmTm == "TOR" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_april_jays = april_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns < HmRuns) | (HmTm == "TOR" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_april_jays = win_april_jays$wins / (win_april_jays$wins + lose_april_jays$losses)
+
+
+win_may_jays = may_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns > HmRuns) | (HmTm == "TOR" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_may_jays = may_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns < HmRuns) | (HmTm == "TOR" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_may_jays = win_may_jays$wins / (win_may_jays$wins + lose_may_jays$losses)
+
+
+win_june_jays = june_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns > HmRuns) | (HmTm == "TOR" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_june_jays = june_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns < HmRuns) | (HmTm == "TOR" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_june_jays = win_june_jays$wins / (win_june_jays$wins + lose_june_jays$losses)
+
+
+win_july_jays = july_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns > HmRuns) | (HmTm == "TOR" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_july_jays = july_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns < HmRuns) | (HmTm == "TOR" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_july_jays = win_july_jays$wins / (win_july_jays$wins + lose_july_jays$losses)
+
+
+win_august_jays = august_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns > HmRuns) | (HmTm == "TOR" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_august_jays = august_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns < HmRuns) | (HmTm == "TOR" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_august_jays = win_august_jays$wins / (win_august_jays$wins + lose_august_jays$losses)
+
+
+win_september_jays = september_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns > HmRuns) | (HmTm == "TOR" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_september_jays = september_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns < HmRuns) | (HmTm == "TOR" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_september_jays = win_september_jays$wins / (win_september_jays$wins + lose_september_jays$losses)
+
+
+win_october_jays = october_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns > HmRuns) | (HmTm == "TOR" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_october_jays = october_games_jays |> 
+  filter( (VisTm == "TOR" & VisRuns < HmRuns) | (HmTm == "TOR" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_october_jays = win_october_jays$wins / (win_october_jays$wins + lose_october_jays$losses)
+
+
+cat("The win percentage of the Bluejays in the month of March was", round(win_pct_march_jays * 100, digits = 2),"% (in one game) \n")
+cat("The win percentage of the Bluejays in the month of April was", round(win_pct_april_jays * 100, digits = 2),"%\n")
+cat("The win percentage of the Bluejays in the month of May was", round(win_pct_may_jays * 100, digits = 2),"%\n")
+cat("The win percentage of the Bluejays in the month of June was", round(win_pct_june_jays * 100, digits = 2),"%\n")
+cat("The win percentage of the Bluejays in the month of July was", round(win_pct_july_jays * 100, digits = 2),"%\n")
+cat("The win percentage of the Bluejays in the month of August was", round(win_pct_august_jays * 100, digits = 2),"%\n")
+cat("The win percentage of the Bluejays in the month of September was", round(win_pct_september_jays * 100, digits = 2),"%\n")
+cat("The win percentage of the Bluejays in the month of October was", round(win_pct_october_jays * 100, digits = 2),"% (in one game)\n")
+```
+
+
+These three teams either had 1 really bad month (under 40% win percentage) or two not good months (between 40-50% win percentage), so the fact that the Padres have two really bad months and one not good month are why they didn't have enough wins to make the playoffs. Even though they had a 73% win percentage for September, the other months explains where they came from but not why they lost those games. Next I want to see how they did in close games and extra inning games to see if clutch situations are why they lost so many games with a monthly breakdown as well to see if it happen a lot in their 3 down months.
+
+
+
+
+
+# Clutch Situations -------------------------------------------------------------------------
+
+
+
+First let's look at how they did overall in clutch situations. To be a clutch situation, I'll look at one run games or games that went into extra innings.
+
+
+```{r}
+# Find each game where it was decided by 1 run or went into extra innings
+clutch_games = padres_games |> 
+  filter(abs(VisRuns - HmRuns) <= 1 | NumOuts > 54)
+
+# Find win percentage during these games 
+win_clutch = clutch_games |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_clutch = clutch_games |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_clutch = win_clutch$wins / (win_clutch$wins + lose_clutch$losses)
+
+# Added Wins and.Losses to help visualize as well
+cat("The win percentage in clutch games was", round(win_pct_clutch * 100, digits = 2),"%. They had", win_clutch$wins, "Wins and", lose_clutch$losses, "Losses in clutch situations.")
+
+```
+
+This could explain why there performed so much worse than they should've. Being 10-28 in clutch situations is horrible for any team, let alone a team who should've at the very least been in the playoffs if not a contender. Now let's go and see if this was pretty even across the entire season, or if there was overlap with their bad months.
+
+
+```{r}
+# Do monthly breakdown for clutch games 
+march_games_clutch = clutch_games |> 
+  filter(Date >= 20230301 & Date < 20230401) # Two games
+april_games_clutch = clutch_games |> 
+  filter(Date >= 20230401 & Date < 20230501)
+may_games_clutch = clutch_games |> 
+  filter(Date >= 20230501 & Date < 20230601)
+june_games_clutch = clutch_games |> 
+  filter(Date >= 20230601 & Date < 20230701)
+july_games_clutch = clutch_games |> 
+  filter(Date >= 20230701 & Date < 20230801)
+august_games_clutch = clutch_games |> 
+  filter(Date >= 20230801 & Date < 20230901)
+september_games_clutch = clutch_games |> 
+  filter(Date >= 20230901 & Date < 20231001)
+october_games_clutch = clutch_games |> 
+  filter(Date >= 20231001 & Date < 20231101) # One non-playoff game
+
+
+win_march_clutch = march_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_march_clutch = march_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_march_clutch = win_march_clutch$wins / (win_march_clutch$wins + lose_march_clutch$losses)
+
+
+win_april_clutch = april_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_april_clutch = april_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_april_clutch = win_april_clutch$wins / (win_april_clutch$wins + lose_april_clutch$losses)
+
+
+win_may_clutch = may_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_may_clutch = may_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_may_clutch = win_may_clutch$wins / (win_may_clutch$wins + lose_may_clutch$losses)
+
+
+win_june_clutch = june_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_june_clutch = june_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_june_clutch = win_june_clutch$wins / (win_june_clutch$wins + lose_june_clutch$losses)
+
+
+win_july_clutch = july_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_july_clutch = july_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_july_clutch = win_july_clutch$wins / (win_july_clutch$wins + lose_july_clutch$losses)
+
+
+win_august_clutch = august_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_august_clutch = august_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_august_clutch = win_august_clutch$wins / (win_august_clutch$wins + lose_august_clutch$losses)
+
+
+win_september_clutch = september_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_september_clutch = september_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_september_clutch = win_september_clutch$wins / (win_september_clutch$wins + lose_september_clutch$losses)
+
+
+win_october_clutch = october_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_october_clutch = october_games_clutch |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_october_clutch = win_october_clutch$wins / (win_october_clutch$wins + lose_october_clutch$losses)
+
+# Added Wins and.Losses to help visualize as well
+cat("The clutch win percentage in the month of March was", round(win_pct_march_clutch * 100, digits = 2),"% (in two games) with", win_march_clutch$wins, "Wins and", lose_march_clutch$losses, "Losses\n")
+cat("The clutch win percentage in the month of April was", round(win_pct_april_clutch * 100, digits = 2),"% with", win_april_clutch$wins, "Wins and", lose_april_clutch$losses, "Losses\n")
+cat("The clutch win percentage in the month of May was", round(win_pct_may_clutch * 100, digits = 2),"% with", win_may_clutch$wins, "Wins and", lose_may_clutch$losses, "Losses\n")
+cat("The clutch win percentage in the month of June was", round(win_pct_june_clutch * 100, digits = 2),"% with", win_june_clutch$wins, "Wins and", lose_june_clutch$losses, "Losses\n")
+cat("The clutch win percentage in the month of July was", round(win_pct_july_clutch * 100, digits = 2),"% with", win_july_clutch$wins, "Wins and", lose_july_clutch$losses, "Losses\n")
+cat("The clutch win percentage in the month of August was", round(win_pct_august_clutch * 100, digits = 2),"% with", win_august_clutch$wins, "Wins and", lose_august_clutch$losses, "Losses\n")
+cat("The clutch win percentage in the month of September was", round(win_pct_september_clutch * 100, digits = 2),"% with", win_september_clutch$wins, "Wins and", lose_september_clutch$losses, "Losses\n")
+cat("The clutch win percentage in the month of October was", round(win_pct_october_clutch * 100, digits = 2),"% (in one game) with", win_october_clutch$wins, "Wins and", lose_october_clutch$losses, "Losses\n")
+```
+
+Looking back at their full monthly breakdown, their bad months were May, June and August. This lines up pretty well with our clutch game monthly breakdown, since they were 2-18 in those 3 months and also had a pretty bad July, but they were 14-5 in non-clutch situations in July so they just handedly beat teams for the majority of the other games. This is also just a very interesting result since they had one of the best closers in the game healthy all season, and 22nd in RP which might just mean that they lost all of these close games with other relivers blowing the game and Josh Hader was just carrying their RP WAR. This tracks since after seeing that Josh Hader had a WAR of 2.4, the RP ranking without him would make them the 4th worst relief pitching staff in the league. 
+
+
+So now that we know it was clutch situations that caused their collapse, let's look at one last thing and see how many of these clutch situations had Josh Hader as a pitcher during the game.
+
+
+
+# Josh Hader/RP -------------------------------------------------------------------------
+
+Let's first look at games where Hader got a Win, a Loss, or a Save because those are the obvious games he played in
+
+
+```{r}
+# Find games where Josh Hader got the Win in clutch games
+hader_win = clutch_games |> 
+  filter(WinPNm == "Josh Hader")
+hader_win
+```
+
+
+```{r}
+# Find games where Josh Hader got the Loss in clutch games
+hader_loss = clutch_games |> 
+  filter(PNAme == "Josh Hader")
+hader_loss
+```
+
+
+```{r}
+# Find games where Josh Hader got the Save in clutch games
+hader_save = clutch_games |> 
+  filter(SavePNm == "Josh Hader")
+hader_save
+```
+
+
+Based off of this we can see that Hader played in at least 11 of the games on the list. I made a CSV file off all the dates from Hader's game log from Baseball Reference. Let's import that and see what other games he played in, where he didn't get a win, a loss, or a save
+
+
+```{r}
+# read csv file of all games Hader played in 2023
+hader_games = read_csv("hader_games.csv")
+
+# join it with the clutch games database so it shows only the clutch games where he played in it at some point
+hader_games = hader_games |> 
+  left_join(clutch_games, by = "Date") |> 
+  filter(Day != "NA")
+hader_games
+```
+
+
+These are all of the games that Hader played in clutch situations. He played 22 of the 38 close games. So that means in his 22 games, he got 1 W, 1 L and 7 SV. So in 13 games he got no result which means he did his job and didn't let the other team win, but just held the game. Let's take a look and see when these games he played in were just in case they also coincide with when they had their really bad clutch months.
+
+
+
+```{r}
+# Do monthly breakdown on clutch games Hader played in
+march_games_clutch_hader = hader_games |> 
+  filter(Date >= 20230301 & Date < 20230401) # Two games
+april_games_clutch_hader = hader_games |> 
+  filter(Date >= 20230401 & Date < 20230501)
+may_games_clutch_hader = hader_games |> 
+  filter(Date >= 20230501 & Date < 20230601)
+june_games_clutch_hader = hader_games |> 
+  filter(Date >= 20230601 & Date < 20230701)
+july_games_clutch_hader = hader_games |> 
+  filter(Date >= 20230701 & Date < 20230801)
+august_games_clutch_hader = hader_games |> 
+  filter(Date >= 20230801 & Date < 20230901)
+september_games_clutch_hader = hader_games |> 
+  filter(Date >= 20230901 & Date < 20231001)
+october_games_clutch_hader = hader_games |> 
+  filter(Date >= 20231001 & Date < 20231101) # One non-playoff game
+
+
+win_march_clutch_hader = march_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_march_clutch_hader = march_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_march_clutch_hader = win_march_clutch_hader$wins / (win_march_clutch_hader$wins + lose_march_clutch_hader$losses)
+
+
+win_april_clutch_hader = april_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_april_clutch_hader = april_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_april_clutch_hader = win_april_clutch_hader$wins / (win_april_clutch_hader$wins + lose_april_clutch_hader$losses)
+
+
+win_may_clutch_hader = may_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_may_clutch_hader = may_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_may_clutch_hader = win_may_clutch_hader$wins / (win_may_clutch_hader$wins + lose_may_clutch_hader$losses)
+
+
+win_june_clutch_hader = june_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_june_clutch_hader = june_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_june_clutch_hader = win_june_clutch_hader$wins / (win_june_clutch_hader$wins + lose_june_clutch_hader$losses)
+
+
+win_july_clutch_hader = july_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_july_clutch_hader = july_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_july_clutch_hader = win_july_clutch_hader$wins / (win_july_clutch_hader$wins + lose_july_clutch_hader$losses)
+
+
+win_august_clutch_hader = august_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_august_clutch_hader = august_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_august_clutch_hader = win_august_clutch_hader$wins / (win_august_clutch_hader$wins + lose_august_clutch_hader$losses)
+
+
+win_september_clutch_hader = september_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_september_clutch_hader = september_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_september_clutch_hader = win_september_clutch_hader$wins / (win_september_clutch_hader$wins + lose_september_clutch_hader$losses)
+
+
+win_october_clutch_hader = october_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns > HmRuns) | (HmTm == "SDN" & VisRuns < HmRuns) ) |> 
+  summarise(wins = n())
+lose_october_clutch_hader = october_games_clutch_hader |> 
+  filter( (VisTm == "SDN" & VisRuns < HmRuns) | (HmTm == "SDN" & VisRuns > HmRuns) ) |> 
+  summarise(losses = n())
+win_pct_october_clutch_hader = win_october_clutch_hader$wins / (win_october_clutch_hader$wins + lose_october_clutch_hader$losses)
+
+# Added Wins and.Losses to help visualize as well
+cat("The clutch win percentage in the month of March was", round(win_pct_march_clutch * 100, digits = 2),"% (in one game) with", win_march_clutch$wins, "Wins and", lose_march_clutch$losses, "Losses. The clutch win percentage in the month of March in games where Hader played was", round(win_pct_march_clutch_hader * 100, digits = 2),"% (in two games) with", win_march_clutch_hader$wins, "Wins and", lose_march_clutch_hader$losses, "Losses\n")
+cat("The clutch win percentage in the month of April was", round(win_pct_april_clutch * 100, digits = 2),"% with", win_april_clutch$wins, "Wins and", lose_april_clutch$losses, "Losses. The clutch win percentage in the month of April in games where Hader played was", round(win_pct_april_clutch_hader * 100, digits = 2),"% with", win_april_clutch_hader$wins, "Wins and", lose_april_clutch_hader$losses, "Losses\n")
+cat("The clutch win percentage in the month of May was", round(win_pct_may_clutch * 100, digits = 2),"% with", win_may_clutch$wins, "Wins and", lose_may_clutch$losses, "Losses. The clutch win percentage in the month of May in games where Hader played was", round(win_pct_may_clutch_hader * 100, digits = 2),"% with", win_may_clutch_hader$wins, "Wins and", lose_may_clutch_hader$losses, "Losses\n")
+cat("The clutch win percentage in the month of June was", round(win_pct_june_clutch * 100, digits = 2),"% with", win_june_clutch$wins, "Wins and", lose_june_clutch$losses, "Losses. The clutch win percentage in the month of June in games where Hader played was", round(win_pct_june_clutch_hader * 100, digits = 2),"% with", win_june_clutch_hader$wins, "Wins and", lose_june_clutch_hader$losses, "Losses\n")
+cat("The clutch win percentage in the month of July was", round(win_pct_july_clutch * 100, digits = 2),"% with", win_july_clutch$wins, "Wins and", lose_july_clutch$losses, "Losses. The clutch win percentage in the month of July in games where Hader played was", round(win_pct_july_clutch_hader * 100, digits = 2),"% with", win_july_clutch_hader$wins, "Wins and", lose_july_clutch_hader$losses, "Losses\n")
+cat("The clutch win percentage in the month of August was", round(win_pct_august_clutch * 100, digits = 2),"% with", win_august_clutch$wins, "Wins and", lose_august_clutch$losses, "Losses. The clutch win percentage in the month of August in games where Hader played was", round(win_pct_august_clutch_hader * 100, digits = 2),"% with", win_august_clutch_hader$wins, "Wins and", lose_august_clutch_hader$losses, "Losses\n")
+cat("The clutch win percentage in the month of September was", round(win_pct_september_clutch * 100, digits = 2),"% with", win_september_clutch$wins, "Wins and", lose_september_clutch$losses, "Losses. The clutch win percentage in the month of September in games where Hader played was", round(win_pct_september_clutch_hader * 100, digits = 2),"% with", win_september_clutch_hader$wins, "Wins and", lose_september_clutch_hader$losses, "Losses\n")
+cat("The clutch win percentage in the month of October was", round(win_pct_october_clutch * 100, digits = 2),"% (in one game) with", win_october_clutch$wins, "Wins and", lose_october_clutch$losses, "Losses. The clutch win percentage in the month of October in games where Hader played was", round(win_pct_october_clutch_hader * 100, digits = 2),"% (in one game) with", win_october_clutch_hader$wins, "Wins and", lose_october_clutch_hader$losses, "Losses\n")
+```
+
+
+As we can see by this, during their bad months of May-August, Hader wasn't in a lot of the losses from June-August and overall Hader did help them in clutch situations but still couldn't overcome it enough to help his team win in these clutch situations since he didn't have losses outside of 1, the offense just didn't back him up. 
+
+
+
+# Conclusion ----------------------------------------------------------------------------
+
+
+It is really baffling to see at first how this Padres team with such a good team with great batters and pitchers could be predicted to do so well, and yet barely be above .500 even thought they did well in most basic statistical categories. We now know that it was because of having bad monthly performances, which a large contributing to that was their inability to win in close and clutch games. This might be the biggest flop in recent sports history of a team who was predicted to be contenders, to be barely .500 and for most of the season until late September, they were under .500. Every other recent flop in sports history has an obvious reason why they lost, whether it was injuries or players taking a step back, here it was something you don't see often with them just being historically unclutch.
