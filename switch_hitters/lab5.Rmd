@@ -12,48 +12,70 @@ output: pdf_document
 library(readr)
 library(tidyverse)
 library(ggplot2)
-switch = read_csv("switch.csv")
-
-switch2 = switch |> 
-  mutate(pa_id = paste(game_date, away_team, home_team, at_bat_number), 
-         H = ifelse(events %in% 
-                      c("single", "double", "triple", "home_run"), 1, 0), 
-         O = ifelse(events %in%
-                      c("double_play", "field_error", "field_out", "fielders_choice_out", "force_out", "grounded_into_double_play", "other_out", "strikeout", "strikeout_double_play", "triple_play"), 1, 0),
-         BB = ifelse(events %in% 
-                       c("walk", "hit_by_pitch"), 1, 0),
-         Sac = ifelse(events %in%
-                        c("sac_fly", "sac_bunt"), 1, 0)) |> 
-  group_by(batter_name, stand, game_year) |> 
-  summarise(
-    Hit = sum(H),
-    Out = sum(O),
-    BB = sum(BB),
-    Sac = sum(Sac),
-    PA = Hit + BB + Sac + Out,  
-    OBP = round((sum(Hit) + sum(BB)) / sum(PA), digits = 3),
-    .groups = "keep"
-  ) |> 
-  group_by(batter_name) |> 
-  mutate(
-    total_PA_left = sum(PA[stand == "L"]),
-    total_PA_right = sum(PA[stand == "R"])
-  ) |> 
-  ungroup() |> 
-  filter(total_PA_left >= 100 & total_PA_right >= 100) |> 
-  filter(PA >= 100)
-
-league_avg_obp = data.frame(
-  year = c(2017, 2018, 2019, 2021, 2022),
-  OBP_avg = c(0.324, 0.318, 0.323, 0.317, 0.312)
-)
-
-switch_with_avg = merge(switch2, league_avg_obp, by.x = "game_year", by.y = "year", all.x = TRUE)
 
 
-obp = switch_with_avg |> 
-  select(c("batter_name", "stand", "game_year", "OBP", "OBP_avg")) |> 
-  arrange(batter_name)
+
+# All of this commented code is what I used to get the csv file. I uploaded the csv file as well so you don't have to download all of the statcast data just to do this.
+
+
+
+#sc = read_csv("~/Downloads/statcast.csv")
+
+#player_stance_counts = sc %>%
+  #group_by(batter_name) %>%
+  #summarise(stance_count = n_distinct(stand))
+
+# Filter out players who have observations from both sides of the plate
+#switch_hitters_ids <- player_stance_counts %>%
+  #filter(stance_count == 2) %>%
+  #pull(batter_name)
+
+# Filter the original data to include only records of these players
+#switch = sc %>%
+  #filter(batter_name %in% switch_hitters_ids) |> 
+  #select(c(batter_name, game_date, away_team, home_team, at_bat_number, events, description, des, stand, type, bb_type, game_year))
+
+
+
+#switch2 = switch |> 
+  #mutate(pa_id = paste(game_date, away_team, home_team, at_bat_number), 
+         #H = ifelse(events %in% 
+                      #c("single", "double", "triple", "home_run"), 1, 0), 
+         #O = ifelse(events %in%
+                      #c("double_play", "field_error", "field_out", "fielders_choice_out", "force_out", "grounded_into_double_play", "other_out", "strikeout", "strikeout_double_play", "triple_play"), 1, 0),
+         #BB = ifelse(events %in% 
+                       #c("walk", "hit_by_pitch"), 1, 0),
+         #Sac = ifelse(events %in%
+                        #c("sac_fly", "sac_bunt"), 1, 0)) |> 
+  #group_by(batter_name, stand, game_year) |> 
+  #summarise(
+    #Hit = sum(H),
+    #Out = sum(O),
+    #BB = sum(BB),
+    #Sac = sum(Sac),
+    #PA = Hit + BB + Sac + Out,  
+    #OBP = round((sum(Hit) + sum(BB)) / sum(PA), digits = 3),.groups = "keep") |> 
+  #group_by(batter_name) |> 
+  #mutate(
+    #total_PA_left = sum(PA[stand == "L"]),
+    #total_PA_right = sum(PA[stand == "R"])) |> 
+  #ungroup() |> 
+  #filter(total_PA_left >= 100 & total_PA_right >= 100) |> 
+  #filter(PA >= 100)
+
+#league_avg_obp = data.frame(
+  #year = c(2017, 2018, 2019, 2021, 2022),
+  #OBP_avg = c(0.324, 0.318, 0.323, 0.317, 0.312))
+
+#switch_with_avg = merge(switch2, league_avg_obp, by.x = "game_year", by.y = "year", all.x = TRUE)
+
+
+#obp = switch_with_avg |> 
+  #select(c("batter_name", "stand", "game_year", "OBP", "OBP_avg")) |> 
+  #arrange(batter_name)
+
+
+obp = read_csv("~/Desktop/stat430/sp24_stat430_jscheer2/labs/lab5/switch.csv")
 
 unique_batters = unique(obp$batter_name)
 

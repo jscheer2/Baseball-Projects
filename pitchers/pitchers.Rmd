@@ -54,10 +54,9 @@ non_hit = rbind(non_hit1, non_hit2)
 pitch_count = non_hit |> 
   group_by(pitcher_name, game_year) |> 
   summarise(total_pitches = n(), .groups = "keep") |> 
-  filter(total_pitches >= 500)
+  filter(total_pitches >= 1000) # Arbitrary number to filter out players who didn't pitch much in a season 
 
-
-unique_pitchers = unique(non_hit$pitcher_name) 
+unique_pitchers = unique(pitch_count$pitcher_name) 
 unique_pitchers <- unique_pitchers[unique_pitchers != "Reynald"]
 non_hit = non_hit |> 
   filter(pitcher_name != "Reynald")
@@ -76,7 +75,7 @@ unique_pitchers = sort(unique_pitchers)
 library(shiny)
 
 # UI
-ui = navbarPage(
+ui <- navbarPage(
   title = "Pitchers Location",
   tabPanel(
     title = "Pitcher's Strike Sone",
@@ -86,7 +85,7 @@ ui = navbarPage(
         selectInput(
           inputId = "pitcher",
           label = "Pitcher: ",
-          choices  = filtered_unique_pitchers,
+          choices  = unique_pitchers,
           selected = "Justin Steele"),
         selectInput(
           inputId = "stand",
@@ -96,32 +95,32 @@ ui = navbarPage(
         selectInput(
           inputId = "pitch_type",
           label = "Pitch Type",
-          choices = c("Playoff" = 1, "Regular Season" = 0),
-          selected = ""),
+          choices = c("CH" = 1, "CU" = 2, "FC" = 3, "FF" = 4, "FO" = 5, "FS" = 6, "FT" = 7, "KC" = 8, "KN" = 9, "SC" = 10, "SI" = 11, "SL" = 12),
+          selected = "FF"),
         selectInput(
           inputId = "year",
           label = "Year",
-          choices = c("Blowout" = 1, "All Games" = 0),
-          selected = ""),
-        selectInput(
-          inputId = "ball",
-          label = "Called Strikes or Called Balls?",
-          choices = c("Both" = 2,"Strikes" = 1, "Balls" = 0),
-          selected = "Both")
-        
+          choices = c("2017" = 2017, "2018" = 2018, "2019" = 2019, "2020" = 2020, "2021" = 2021, "2022" = 2022, "All" = 1),
+          selected = "All")
       ),
       mainPanel(plotOutput("plot"))
     )
-    
   ),
   tabPanel(title = "About", includeMarkdown(""))
 )
 
 # Server
-server = function(input, output) {
+server <- function(input, output, session) {
   
+  observe({
+    # Update choices for pitch type based on selected pitcher
+    updateSelectInput(session, "pitch_type", choices = unique(non_hit$pitch_type))
+    
+    # Update choices for year based on selected pitcher
+    updateSelectInput(session, "year", choices = unique(non_hit$game_year))
+  })
   
-output$plot = renderPlot({
+  output$plot <- renderPlot({
     filtered_data <- non_hit %>%
       filter(
         pitcher_name == input$pitcher,
@@ -130,21 +129,22 @@ output$plot = renderPlot({
         game_year == input$year
       )
     
-    # Create a scatter plot of pitch locations
-    p <- ggplot(filtered_data, aes(x = plate_x, y = plate_z)) +
+    # Create a scatter plot of pitch locations with different colors for different pitch types
+    p <- ggplot(filtered_data, aes(x = plate_x, y = plate_z, color = pitch_type)) +
       geom_point() +  # Scatter plot of pitch locations
-      labs(x = "Horizontal Location", y = "Vertical Location") +  # Axis labels
+      labs(x = "Horizontal Location", y = "Vertical Location", color = "Pitch Type") +  # Axis and legend labels
       ggtitle("Pitcher Location") +  # Plot title
-      theme_minimal()  # Minimal theme
+      theme_minimal() +  # Minimal theme
+      scale_color_discrete(name = "Pitch Type")  # Custom legend title
     
-    # Return the plot
-    print(p)
-})
-
+    # Return the ggplot plot
+    p
+  })
 }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
 ```
 
 
@@ -195,6 +195,15 @@ output$plot = renderPlot({
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+
+
+        selectInput(
+          inputId = "ball",
+          label = "Called Strikes or Called Balls?",
+          choices = c("Both" = 2,"Strikes" = 1, "Balls" = 0),
+          selected = "Both")
+
 ```
 
 
