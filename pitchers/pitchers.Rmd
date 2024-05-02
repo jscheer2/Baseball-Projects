@@ -68,6 +68,28 @@ remove_accents = function(string) {
 unique_pitchers = lapply(unique_pitchers, remove_accents)
 unique_pitchers = unlist(unique_pitchers)
 unique_pitchers = sort(unique_pitchers)
+
+
+
+
+
+
+pitch_count2 = hit |> 
+  group_by(pitcher_name, game_year) |> 
+  summarise(total_hits = n(), .groups = "keep") |> 
+  filter(total_hits >= 100) # Arbitrary number to filter out players who didn't pitch much in a season 
+
+unique_pitchers2 = unique(pitch_count2$pitcher_name) 
+unique_pitchers2 <- unique_pitchers2[unique_pitchers2 != "Reynald"]
+hit = hit |> 
+  filter(pitcher_name != "Reynald")
+
+
+remove_accents = function(string) {
+  iconv(string, "ASCII//TRANSLIT")
+}
+unique_pitchers2 = lapply(unique_pitchers2, remove_accents)
+unique_pitchers2 = unlist(unique_pitchers2)
 ```
 
 
@@ -78,73 +100,247 @@ library(shiny)
 ui <- navbarPage(
   title = "Pitchers Location",
   tabPanel(
-    title = "Pitcher's Strike Sone",
+    title = "Pitcher's non-hits Strike Zone",
     titlePanel(title = "MLB Statcast data: 2017-2022"),
     sidebarLayout(
       sidebarPanel(
         selectInput(
           inputId = "pitcher",
           label = "Pitcher: ",
-          choices  = unique_pitchers,
-          selected = "Justin Steele"),
+          choices = unique_pitchers,
+          selected = "Justin Steele"
+        ),
         selectInput(
           inputId = "stand",
           label = "Against Lefty or Righty?",
-          choices = c("Lefty" = 1, "Righty" = 0),
-          selected = "Righty"),
+          choices = c("Lefty" = "L", "Righty" = "R", "Both" = "Both"),
+          selected = "Both"
+        ),
         selectInput(
           inputId = "pitch_type",
           label = "Pitch Type",
-          choices = c("CH" = 1, "CU" = 2, "FC" = 3, "FF" = 4, "FO" = 5, "FS" = 6, "FT" = 7, "KC" = 8, "KN" = 9, "SC" = 10, "SI" = 11, "SL" = 12),
-          selected = "FF"),
+          choices = c(
+            "Change-Up" = "CH", "Curveball" = "CU", "Cutter" = "FC",
+            "Four-seam Fastball" = "FF", "Forkball" = "FO", "Splitter" = "FS",
+            "Two-seam Fastball" = "FT", "Knuckle Curve" = "KC", "Knuckleball" = "KN",
+            "Screwball" = "SC", "Sinker" = "SI", "Slider" = "SL"
+          ),
+          selected = "FF"
+        ),
         selectInput(
           inputId = "year",
           label = "Year",
-          choices = c("2017" = 2017, "2018" = 2018, "2019" = 2019, "2020" = 2020, "2021" = 2021, "2022" = 2022, "All" = 1),
-          selected = "All")
+          choices = c(
+            "2017" = 2017, "2018" = 2018, "2019" = 2019,
+            "2020" = 2020, "2021" = 2021, "2022" = 2022, "All" = "All"
+          ),
+          selected = "All"
+        ),
+        selectInput(
+          inputId = "ball",
+          label = "Strikes or Balls?",
+          choices = c("Both" = "Both", "Strikes" = "S", "Balls" = "B"),
+          selected = "Both"
+        )
       ),
-      mainPanel(plotOutput("plot"))
+      mainPanel(plotOutput("plot1"))
     )
   ),
-  tabPanel(title = "About", includeMarkdown(""))
+  tabPanel(
+    title = "Pitcher's Hitted Balls Strike Zone",
+    titlePanel(title = "MLB Statcast data: 2017-2022"),
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(
+          inputId = "pitcher2",
+          label = "Pitcher: ",
+          choices = unique_pitchers2,
+          selected = "Justin Steele"
+        ),
+        selectInput(
+          inputId = "stand2",
+          label = "Against Lefty or Righty?",
+          choices = c("Lefty" = "L", "Righty" = "R", "Both" = "Both"),
+          selected = "Both"
+        ),
+        selectInput(
+          inputId = "pitch_type2",
+          label = "Pitch Type",
+          choices = c(
+            "Change-Up" = "CH", "Curveball" = "CU", "Cutter" = "FC",
+            "Four-seam Fastball" = "FF", "Forkball" = "FO", "Splitter" = "FS",
+            "Two-seam Fastball" = "FT", "Knuckle Curve" = "KC", "Knuckleball" = "KN",
+            "Screwball" = "SC", "Sinker" = "SI", "Slider" = "SL"
+          ),
+          selected = "FF"
+        ),
+        selectInput(
+          inputId = "year2",
+          label = "Year",
+          choices = c(
+            "2017" = 2017, "2018" = 2018, "2019" = 2019,
+            "2020" = 2020, "2021" = 2021, "2022" = 2022, "All" = "All"
+          ),
+          selected = "All"
+        )
+      ),
+      mainPanel(plotOutput("plot2"))
+    )
+  ),
+  tabPanel(
+    title = "Pitcher's Hitted Balls",
+    titlePanel(title = "MLB Statcast data: 2017-2022"),
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(
+          inputId = "pitcher3",
+          label = "Pitcher: ",
+          choices = unique_pitchers2,
+          selected = "Justin Steele"
+        ),
+        selectInput(
+          inputId = "stand3",
+          label = "Against Lefty or Righty?",
+          choices = c("Lefty" = "L", "Righty" = "R", "Both" = "Both"),
+          selected = "Both"
+        ),
+        selectInput(
+          inputId = "pitch_type3",
+          label = "Pitch Type",
+          choices = c(
+            "Change-Up" = "CH", "Curveball" = "CU", "Cutter" = "FC",
+            "Four-seam Fastball" = "FF", "Forkball" = "FO", "Splitter" = "FS",
+            "Two-seam Fastball" = "FT", "Knuckle Curve" = "KC", "Knuckleball" = "KN",
+            "Screwball" = "SC", "Sinker" = "SI", "Slider" = "SL"
+          ),
+          selected = "FF"
+        ),
+        selectInput(
+          inputId = "year3",
+          label = "Year",
+          choices = c(
+            "2017" = 2017, "2018" = 2018, "2019" = 2019,
+            "2020" = 2020, "2021" = 2021, "2022" = 2022, "All" = "All"
+          ),
+          selected = "All"
+        )
+      ),
+      mainPanel(plotOutput("plot3"))
+    )
+  ),
+  tabPanel(title = "About", includeMarkdown("Heyyyy"))
 )
 
 # Server
 server <- function(input, output, session) {
   
-  observe({
-    # Update choices for pitch type based on selected pitcher
-    updateSelectInput(session, "pitch_type", choices = unique(non_hit$pitch_type))
-    
-    # Update choices for year based on selected pitcher
-    updateSelectInput(session, "year", choices = unique(non_hit$game_year))
-  })
-  
-  output$plot <- renderPlot({
+  output$plot1 <- renderPlot({
     filtered_data <- non_hit %>%
       filter(
         pitcher_name == input$pitcher,
-        stand == input$stand,
-        pitch_type == input$pitch_type,
-        game_year == input$year
+        pitch_type == input$pitch_type
       )
     
-    # Create a scatter plot of pitch locations with different colors for different pitch types
-    p <- ggplot(filtered_data, aes(x = plate_x, y = plate_z, color = pitch_type)) +
-      geom_point() +  # Scatter plot of pitch locations
-      labs(x = "Horizontal Location", y = "Vertical Location", color = "Pitch Type") +  # Axis and legend labels
-      ggtitle("Pitcher Location") +  # Plot title
-      theme_minimal() +  # Minimal theme
-      scale_color_discrete(name = "Pitch Type")  # Custom legend title
+    if (input$year != "All") {
+      filtered_data <- filtered_data %>%
+        filter(game_year == input$year)
+    }
     
-    # Return the ggplot plot
+    if (input$stand != "Both") {
+      filtered_data <- filtered_data %>%
+        filter(stand == input$stand)
+    }
+    
+    if (input$ball != "Both") {
+      filtered_data <- filtered_data %>%
+        filter(type == input$ball)
+    }
+    
+    p <- ggplot(filtered_data, aes(x = plate_x, y = plate_z, color = factor(type, levels = c("S", "B")))) +
+      geom_point() + 
+      geom_rect(
+        xmin = -0.83, xmax = 0.83,
+        ymin = 1.17, ymax = 3.92,
+        fill = NA, color = "black", linetype = "dashed"
+      ) +  
+      labs(x = "Horizontal Location", y = "Vertical Location", color = "Pitch Call") +  
+      ggtitle("Pitcher Location") +  
+      theme_minimal() +  
+      scale_color_manual(values = c("red", "blue"), labels = c("Strikes", "Balls")) +  
+      coord_cartesian(xlim = c(-2, 2), ylim = c(0, 5)) +
+      guides(color = guide_legend(title = "Pitch Call"))
+    
     p
+  })
+  
+  
+  output$plot2 <- renderPlot({
+    filtered_data2 <- hit %>%
+      filter(
+        pitcher_name == input$pitcher2,
+        pitch_type == input$pitch_type2
+      )
+    
+    if (input$year2 != "All") {
+      filtered_data2 <- filtered_data2 %>%
+        filter(game_year == input$year2)
+    }
+    
+    if (input$stand2 != "Both") {
+      filtered_data2 <- filtered_data2 %>%
+        filter(stand == input$stand2)
+    }
+    
+    p2 <- ggplot(filtered_data2, aes(x = plate_x, y = plate_z, color = pitch_type)) +
+      geom_point() + 
+      geom_rect(
+        xmin = -0.83, xmax = 0.83,
+        ymin = 1.17, ymax = 3.92,
+        fill = NA, color = "black", linetype = "dashed"
+      ) +  
+      labs(x = "Horizontal Location", y = "Vertical Location", color = "Pitch Type") +  
+      ggtitle("Pitcher Location") +  
+      theme_minimal() +  
+      coord_cartesian(xlim = c(-2, 2), ylim = c(0, 5))
+    
+    p2
+  })
+  
+  output$plot3 <- renderPlot({
+    filtered_data3 <- hit %>%
+      filter(
+        pitcher_name == input$pitcher3,
+        pitch_type == input$pitch_type3
+      )
+    
+    if (input$year3 != "All") {
+      filtered_data3 <- filtered_data3 %>%
+        filter(game_year == input$year3)
+    }
+    
+    if (input$stand3 != "Both") {
+      filtered_data3 <- filtered_data3 %>%
+        filter(stand == input$stand3)
+    }
+    
+    p3 <- ggplot(filtered_data3, aes(x = plate_x, y = plate_z, color = pitch_type)) +
+      geom_point() + 
+      geom_rect(
+        xmin = -0.83, xmax = 0.83,
+        ymin = 1.17, ymax = 3.92,
+        fill = NA, color = "black", linetype = "dashed"
+      ) +  
+      labs(x = "Horizontal Location", y = "Vertical Location", color = "Pitch Type") +  
+      ggtitle("Pitcher Location") +  
+      theme_minimal() +  
+      coord_cartesian(xlim = c(-2, 2), ylim = c(0, 5))
+    
+    p3
   })
 }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
 ```
 
 
@@ -170,6 +366,7 @@ ui = navbarPage(
     )
     
   ),
+  
   tabPanel(title = "About", includeMarkdown("This Shiny App looks at players who have at least 100 PAs as a righty and as a lefty and compares their seasonal OBP to the league average OBP. The purpose of this is to see if being a switch hitter is actually beneifical for the hitter or if they might be better off just sticking to working on getting better at just one side of the plate. Unfortuantely I could only obtain this data from statcast so it is only from 2017-2022 seasons, so we can only see current and recently retired switch hitters. The data is setup where the bars are the OBP as a lefty and righty from 2017-2022 for everyone that had enough switch hitting PAs. The dashed line is the league average OBP for each season. There are a few players that will have just one stand in their graph because of not having enough plate appearances to make the threshold for both stands. Also I apologize for the double league average OBP above each year. I could only get it to show for each stand instead for each year."))
 )
 
@@ -198,11 +395,7 @@ shinyApp(ui = ui, server = server)
 
 
 
-        selectInput(
-          inputId = "ball",
-          label = "Called Strikes or Called Balls?",
-          choices = c("Both" = 2,"Strikes" = 1, "Balls" = 0),
-          selected = "Both")
+
 
 ```
 
