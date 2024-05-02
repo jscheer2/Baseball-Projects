@@ -94,6 +94,23 @@ unique_pitchers2 = unlist(unique_pitchers2)
 
 
 ```{r}
+spray_chart <- function(...) {
+  ggplot(...) + 
+    geom_curve(x = 33, xend = 223, y = -100, yend = -100, curvature = -0.65, color = "black") + 
+    geom_segment(x = 128, xend = 33, y = -208, yend = -100, color = "black") + 
+    geom_segment(x = 128, xend = 223, y = -208, yend = -100, color = "black") + 
+    geom_curve(x = 83, xend = 173, y = -155, yend = -156, curvature = -0.65, linetype = "dotted", color = "black") + 
+    coord_fixed() + 
+    scale_x_continuous(NULL, limits = c(25, 225)) + 
+    scale_y_continuous(NULL, limits = c(-225, -25))
+}
+```
+
+
+
+
+
+```{r}
 library(shiny)
 
 # UI
@@ -223,6 +240,15 @@ ui <- navbarPage(
             "2020" = 2020, "2021" = 2021, "2022" = 2022, "All" = "All"
           ),
           selected = "All"
+        ),
+        selectInput(
+          inputId = "event3",
+          label = "Event",
+          choices = c(
+            "Double" = "double", "Field Error" = "field_error", "Out" = "field_out",
+            "Fielder's Choice" = "fielders_choice", "Force Out" = "force_out", "GIDP" = "grounded_into_double_play", "Home Run" = "home_run", "Sacrifice Fly" = "sac_fly", "Single" = "single", "Triple" = "triple", "All" = "All"
+          ),
+          selected = "All"
         )
       ),
       mainPanel(plotOutput("plot3"))
@@ -323,17 +349,14 @@ server <- function(input, output, session) {
         filter(stand == input$stand3)
     }
     
-    p3 <- ggplot(filtered_data3, aes(x = plate_x, y = plate_z, color = pitch_type)) +
+    if (input$event3 != "All") {
+      filtered_data3 <- filtered_data3 %>%
+        filter(events == input$event3)
+    }
+    
+    p3 <- spray_chart(filtered_data3, aes(x=hc_x, y=-hc_y, color=events)) +
       geom_point() + 
-      geom_rect(
-        xmin = -0.83, xmax = 0.83,
-        ymin = 1.17, ymax = 3.92,
-        fill = NA, color = "black", linetype = "dashed"
-      ) +  
-      labs(x = "Horizontal Location", y = "Vertical Location", color = "Pitch Type") +  
-      ggtitle("Pitcher Location") +  
-      theme_minimal() +  
-      coord_cartesian(xlim = c(-2, 2), ylim = c(0, 5))
+      theme_minimal()
     
     p3
   })
