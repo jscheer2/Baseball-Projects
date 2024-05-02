@@ -51,27 +51,30 @@ non_hit = rbind(non_hit1, non_hit2)
 
 
 ```{r}
+# I'm making a pitch count variable so it only shows pitchers who threw a lot in a season
 pitch_count = non_hit |> 
   group_by(pitcher_name, game_year) |> 
   summarise(total_pitches = n(), .groups = "keep") |> 
   filter(total_pitches >= 1000) # Arbitrary number to filter out players who didn't pitch much in a season 
 
+# create a variable to use for Shiny app when sorting by pitchers
 unique_pitchers = unique(pitch_count$pitcher_name) 
-unique_pitchers <- unique_pitchers[unique_pitchers != "Reynald"]
+unique_pitchers = unique_pitchers[unique_pitchers != "Reynald"] # For some reason this was in both and messed with my data
 non_hit = non_hit |> 
   filter(pitcher_name != "Reynald")
 
-
+# Removes accents so R Shiny can display everyone
 remove_accents = function(string) {
   iconv(string, "ASCII//TRANSLIT")
 }
+# Ran unique pitchers through the function and sort alphabetically
 unique_pitchers = lapply(unique_pitchers, remove_accents)
 unique_pitchers = unlist(unique_pitchers)
 unique_pitchers = sort(unique_pitchers)
 
 
 
-
+# Did the same thing for hit data frame
 
 
 pitch_count2 = hit |> 
@@ -80,21 +83,20 @@ pitch_count2 = hit |>
   filter(total_hits >= 100) # Arbitrary number to filter out players who didn't pitch much in a season 
 
 unique_pitchers2 = unique(pitch_count2$pitcher_name) 
-unique_pitchers2 <- unique_pitchers2[unique_pitchers2 != "Reynald"]
+unique_pitchers2 = unique_pitchers2[unique_pitchers2 != "Reynald"]
 hit = hit |> 
   filter(pitcher_name != "Reynald")
 
 
-remove_accents = function(string) {
-  iconv(string, "ASCII//TRANSLIT")
-}
 unique_pitchers2 = lapply(unique_pitchers2, remove_accents)
 unique_pitchers2 = unlist(unique_pitchers2)
 ```
 
 
 ```{r}
-spray_chart <- function(...) {
+# Created a function to create a rough MLB field for balls in play
+
+spray_chart = function(...) {
   ggplot(...) + 
     geom_curve(x = 33, xend = 223, y = -100, yend = -100, curvature = -0.65, color = "black") + 
     geom_segment(x = 128, xend = 33, y = -208, yend = -100, color = "black") + 
@@ -111,10 +113,11 @@ spray_chart <- function(...) {
 
 
 ```{r}
+# Download library
 library(shiny)
 
 # UI
-ui <- navbarPage(
+ui = navbarPage(
   title = "Pitchers Location",
   tabPanel(
     title = "Pitcher's non-hits Strike Zone",
@@ -254,35 +257,35 @@ ui <- navbarPage(
       mainPanel(plotOutput("plot3"))
     )
   ),
-  tabPanel(title = "About", includeMarkdown("Heyyyy"))
+  tabPanel(title = "About", includeMarkdown("So this R Shiny App looks at how pitchers, from 2017-2022, perform with each of their pitch types. The first plot shows where each pitch type is thrown in a general strike zone. It can also be filtered by lefty or righty batters and what year you want to look at. I also included an input to see the called balls and strikes for each pitch type. The second plot shows where he pitch that was hit was located, for the ones that have that data (some are missing data points). This also can be filtered by pitches, year and which side of batters. The third plot shows where in the field each ball in play was hit to while also showing the event outcome of the play. You once again can filter by year, pitch type, lefties or righties and you can look at specific events like HRs or Doubles. This won't be every pitcher because my computer could only handle so many pitchers in the filter, so I put a minimum number of pitches thrown or hits allowed to qualify."))
 )
 
 # Server
-server <- function(input, output, session) {
+server = function(input, output, session) {
   
-  output$plot1 <- renderPlot({
-    filtered_data <- non_hit %>%
+  output$plot1 = renderPlot({
+    filtered_data = non_hit |> 
       filter(
         pitcher_name == input$pitcher,
         pitch_type == input$pitch_type
       )
     
     if (input$year != "All") {
-      filtered_data <- filtered_data %>%
+      filtered_data = filtered_data |> 
         filter(game_year == input$year)
     }
     
     if (input$stand != "Both") {
-      filtered_data <- filtered_data %>%
+      filtered_data = filtered_data |> 
         filter(stand == input$stand)
     }
     
     if (input$ball != "Both") {
-      filtered_data <- filtered_data %>%
+      filtered_data = filtered_data |> 
         filter(type == input$ball)
     }
     
-    p <- ggplot(filtered_data, aes(x = plate_x, y = plate_z, color = factor(type, levels = c("S", "B")))) +
+    p = ggplot(filtered_data, aes(x = plate_x, y = plate_z, color = factor(type, levels = c("S", "B")))) +
       geom_point() + 
       geom_rect(
         xmin = -0.83, xmax = 0.83,
@@ -300,24 +303,24 @@ server <- function(input, output, session) {
   })
   
   
-  output$plot2 <- renderPlot({
-    filtered_data2 <- hit %>%
+  output$plot2 = renderPlot({
+    filtered_data2 = hit |> 
       filter(
         pitcher_name == input$pitcher2,
         pitch_type == input$pitch_type2
       )
     
     if (input$year2 != "All") {
-      filtered_data2 <- filtered_data2 %>%
+      filtered_data2 = filtered_data2 |> 
         filter(game_year == input$year2)
     }
     
     if (input$stand2 != "Both") {
-      filtered_data2 <- filtered_data2 %>%
+      filtered_data2 = filtered_data2 |> 
         filter(stand == input$stand2)
     }
     
-    p2 <- ggplot(filtered_data2, aes(x = plate_x, y = plate_z, color = pitch_type)) +
+    p2 = ggplot(filtered_data2, aes(x = plate_x, y = plate_z, color = pitch_type)) +
       geom_point() + 
       geom_rect(
         xmin = -0.83, xmax = 0.83,
@@ -332,29 +335,29 @@ server <- function(input, output, session) {
     p2
   })
   
-  output$plot3 <- renderPlot({
-    filtered_data3 <- hit %>%
+  output$plot3 = renderPlot({
+    filtered_data3 = hit |> 
       filter(
         pitcher_name == input$pitcher3,
         pitch_type == input$pitch_type3
       )
     
     if (input$year3 != "All") {
-      filtered_data3 <- filtered_data3 %>%
+      filtered_data3 = filtered_data3 |> 
         filter(game_year == input$year3)
     }
     
     if (input$stand3 != "Both") {
-      filtered_data3 <- filtered_data3 %>%
+      filtered_data3 = filtered_data3 |> 
         filter(stand == input$stand3)
     }
     
     if (input$event3 != "All") {
-      filtered_data3 <- filtered_data3 %>%
+      filtered_data3 = filtered_data3 |> 
         filter(events == input$event3)
     }
     
-    p3 <- spray_chart(filtered_data3, aes(x=hc_x, y=-hc_y, color=events)) +
+    p3 = spray_chart(filtered_data3, aes(x=hc_x, y=-hc_y, color=events)) +
       geom_point() + 
       theme_minimal()
     
@@ -365,62 +368,5 @@ server <- function(input, output, session) {
 # Run the application 
 shinyApp(ui = ui, server = server)
 ```
-
-
-
-```{r}
-library(shiny)
-
-# UI
-ui = navbarPage(
-  title = "Switch Hitting Advantage or Disadvantage?",
-  tabPanel(
-    title = "Visualization",
-    titlePanel(title = "Switch Hitting OBP Data 2017-2022"),
-    sidebarLayout(
-      sidebarPanel(
-        selectInput(
-          inputId = "batter",
-          label = "Batter:",
-          choices  = unique_batters,
-          selected = "Ian Happ"),
-      ),
-      mainPanel(plotOutput("plot"))
-    )
-    
-  ),
-  
-  tabPanel(title = "About", includeMarkdown("This Shiny App looks at players who have at least 100 PAs as a righty and as a lefty and compares their seasonal OBP to the league average OBP. The purpose of this is to see if being a switch hitter is actually beneifical for the hitter or if they might be better off just sticking to working on getting better at just one side of the plate. Unfortuantely I could only obtain this data from statcast so it is only from 2017-2022 seasons, so we can only see current and recently retired switch hitters. The data is setup where the bars are the OBP as a lefty and righty from 2017-2022 for everyone that had enough switch hitting PAs. The dashed line is the league average OBP for each season. There are a few players that will have just one stand in their graph because of not having enough plate appearances to make the threshold for both stands. Also I apologize for the double league average OBP above each year. I could only get it to show for each stand instead for each year."))
-)
-
-# Server
-server = function(input, output) {
-  
-  
-output$plot = renderPlot({
-  filtered_obp = obp[obp$batter_name == input$batter, ]
-  
-  ggplot(data = filtered_obp, aes(x = game_year, y = OBP, fill = stand, color = stand)) +
-    geom_bar(stat = "identity", position = "dodge") +
-    geom_text(aes(label = round(OBP, 3)), position = position_dodge(width = 0.9), vjust = 1.2, size = 3, color = "black") +
-    geom_line(aes(x = game_year, y = OBP_avg, group = 1), data = filtered_obp, color = "darkblue", linetype = "dashed") +
-    geom_point(aes(x = game_year, y = OBP_avg), data = filtered_obp, color = "darkblue", size = 2) +  
-    geom_text(aes(label = round(OBP_avg, 3)), data = filtered_obp, vjust = -0.3, size = 3, color = "darkblue", nudge_y = 0.03) +
-    scale_y_continuous(labels = function(x) round(x, 3)) +  
-    labs(x = "Year", y = "OBP", fill = "Stand", color = "Stand") +
-    theme_bw()
-})
-
-}
-
-# Run the application 
-shinyApp(ui = ui, server = server)
-
-
-
-
-
-```
-
 
 
