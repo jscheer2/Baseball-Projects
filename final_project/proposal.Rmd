@@ -1,0 +1,51 @@
+---
+title: "Final Project Proposal"
+author: "Jason Scheer"
+date: "Due on 04/19/2023 at 11:59 pm"
+output: pdf_document
+urlcolor: blue
+---
+
+
+Your final project proposal is meant to ensure that you and your final project group choose a project that is rigorous, interesting, and can be completed in time. Final projects are due on 05/10 at 11:59 pm, and you are allowed and encouraged to work in groups of 2-3. Completion of this project proposal is worth 50 points. 
+
+Recall that there are 370 points allocated towards your final project. As just mentioned, this proposal is worth 50 points. There are 70 points allocated for your presentation. This presentation will be in the form of a 5-10 minute recorded presentation. The remaining 250 points is allocated to project materials and deliverables. Your presentation and your project materials are all due on or before 05/10 at 11:59 pm.
+
+
+
+**Instructions.** Fill out this form.
+
+
+**Group members**: 
+  
+Jason Scheer
+
+
+**Project description.** Provide at least one paragraph describing what your project is about: 
+  
+
+My project will be a deep analysis of what happened to the 2023 Padres. They were projected to be a top 5 team in the MLB by most media and power rankings and they ended up being below .500 for most of the season even though they did well in a lot of statistics. So my project would be trying to see what caused them to lose so many games and especially in the first 2/3 of the season, see why they were underperforming.
+
+
+**Project deliverables.** Provide at least one paragraph describing what you plan to produce: 
+  
+
+
+I plan to produce statistics and reasons as to why they lost so many games and how they underperformed their top 5 projected season. I will find and show their team statistics and their team win and losses in certain scenarios to see if I can find out why they failed.
+
+
+
+
+**Project submission.** Provide at least one paragraph describing how you plan to submit your final project materials: 
+  
+ 
+
+I plan to submit my final project through a PDF like R Markdown either by uploading it to my GitHub like my HW assignments or a pdf version to Canvas depending on which you’d prefer.
+
+
+
+**R shiny layout.** Provide a sketch of the proposed layout of your Shiny app, ignore this if you are not creating a Shiny app:
+
+
+
+N/A
