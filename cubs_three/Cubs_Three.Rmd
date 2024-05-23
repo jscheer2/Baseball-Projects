@@ -1,0 +1,44 @@
+---
+title: "Cubs"
+author: "Jason Scheer"
+date: "2024-05-02"
+output: pdf_document
+---
+
+
+
+For this project I want to take a look at the fall off of the Chicago Cubs "Big Three" in Baez, Rizzo, and Bryant and how they fell from greatness. I also want to see if it happened gradually or if stats say it was all at once. Let's start by looking at their seasonal stats and see if anything weird sticks out.
+
+
+```{r}
+library(Lahman)
+library(dplyr)
+
+kris = Batting |> 
+  filter(playerID == "bryankr01") |> 
+  select(c("playerID", "yearID", "teamID", "G", "AB", "R", "H", "X2B", "X3B", "HR", "RBI", "SB", "CS", "BB", "SO", "HBP", "SF")) |> 
+  mutate(
+    X1B = (H - X2B - X3B - HR),
+    OBP = round(((H + BB + HBP) / (AB + BB + HBP + SF)), digits = 3),
+    SLG = round(((X1B + (2 * X2B) + (3 * X3B) + (4 * HR)) / AB) , digits = 3),
+    OPS = round(OBP + SLG, digits = 3))
+
+baez = Batting |> 
+  filter(playerID == "baezja01") |> 
+  select(c("playerID", "yearID", "teamID", "G", "AB", "R", "H", "X2B", "X3B", "HR", "RBI", "SB", "CS", "BB", "SO", "HBP", "SF"))|> 
+  mutate(
+    X1B = (H - X2B - X3B - HR),
+    OBP = round(((H + BB + HBP) / (AB + BB + HBP + SF)), digits = 3),
+    SLG = round(((X1B + (2 * X2B) + (3 * X3B) + (4 * HR)) / AB) , digits = 3),
+    OPS = round(OBP + SLG, digits = 3))
+
+rizzo = Batting |> 
+  filter(playerID == "rizzoan01") |> 
+  select(c("playerID", "yearID", "teamID", "G", "AB", "R", "H", "X2B", "X3B", "HR", "RBI", "SB", "CS", "BB", "SO", "HBP", "SF"))|> 
+  mutate(
+    X1B = (H - X2B - X3B - HR),
+    OBP = round(((H + BB + HBP) / (AB + BB + HBP + SF)), digits = 3),
+    SLG = round(((X1B + (2 * X2B) + (3 * X3B) + (4 * HR)) / AB) , digits = 3),
+    OPS = round(OBP + SLG, digits = 3))
+```
+
