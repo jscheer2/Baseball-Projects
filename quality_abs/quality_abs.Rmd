@@ -1,0 +1,83 @@
+---
+title: "Quality PAs"
+author: "Jason Scheer"
+date: "2024-05-09"
+output: pdf_document
+---
+
+
+```{r}
+library(readr)
+library(dplyr)
+
+pas = read.csv("~/Desktop/baseball/Baseball-Projects/quality_abs/pas.csv")
+
+pa = pas |> 
+  mutate(quality_ab = ifelse(events == "single" | events == "double" |events == "triple" | events == "home_run" | events == "walk" | events == "hit_by_pitch" | events == "sac_fly" | events == "sac_bunt" | launch_speed >= 95 | pitch_number >= 7, 1, 0))
+```
+
+
+
+
+```{r}
+quality_abs = pa |> 
+  group_by(batter_name, game_year) |> 
+  summarise(abs = n(), 
+            quality_abs = sum(quality_ab, na.rm = TRUE), 
+            `%` = round(quality_abs / abs * 100, digits = 2) , .groups = "keep") |> 
+  filter(abs >= 100)
+  mutate(batter_name = iconv(batter_name, "ASCII//TRANSLIT"))
+
+quality_abs[ ,1] = iconv(quality_abs[, 1], "ASCII//TRANSLIT")
+```
+
+
+
+```{r}
+players = Batting |> 
+  filter(yearID >= 2017) |> 
+  mutate(X1B = (H - X2B - X3B - HR)) |> 
+  replace_na(list(HBP = 0, SF = 0)) |> 
+  group_by(playerID, yearID) |> 
+  summarize(
+    AB = sum(AB, na.rm = TRUE),
+    H = sum(H, na.rm = TRUE),
+    BB = sum(BB, na.rm = TRUE),
+    HBP = sum(HBP, na.rm = TRUE),
+    SF = sum(SF, na.rm = TRUE),
+    X1B = sum(X1B, na.rm = TRUE),
+    X2B = sum(X2B, na.rm = TRUE),
+    X3B = sum(X3B, na.rm = TRUE),
+    HR = sum(HR, na.rm = TRUE), .groups = "keep") |> 
+  mutate(
+    OBP = round(((H + BB + HBP) / (AB + BB + HBP + SF)), digits = 3),
+    SLG = round(((X1B + (2 * X2B) + (3 * X3B) + (4 * HR)) / AB), digits = 3),
+    OPS = OBP + SLG) |> 
+  filter(AB >= 100) |> 
+  select(playerID, yearID, AB, OBP, SLG, OPS) |> 
+  ungroup()
+
+names = People |> 
+  select(playerID, nameFirst, nameLast) |> 
+  mutate(batter_name = paste(nameFirst, nameLast, sep = " ")) |> 
+  select(playerID, batter_name)
+
+
+players2 = players |> 
+  left_join(names, by = "playerID") |> 
+  mutate(game_year = yearID) |> 
+  select(batter_name, game_year, AB, OBP, SLG, OPS)
+```
+
+
+
+
+```{r}
+quality_abs2 = quality_abs |> 
+  left_join(players2, by = c("batter_name", "game_year")) |> 
+  select(-AB)
+
+
+```
+
+
