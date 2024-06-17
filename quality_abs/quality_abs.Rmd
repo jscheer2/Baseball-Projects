@@ -9,6 +9,9 @@ output: pdf_document
 ```{r}
 library(readr)
 library(dplyr)
+library(stringi)
+library(tidyr)
+library(Lahman)
 
 pas = read.csv("~/Desktop/baseball/Baseball-Projects/quality_abs/pas.csv")
 
@@ -25,10 +28,11 @@ quality_abs = pa |>
   summarise(abs = n(), 
             quality_abs = sum(quality_ab, na.rm = TRUE), 
             `%` = round(quality_abs / abs * 100, digits = 2) , .groups = "keep") |> 
-  filter(abs >= 100)
-  mutate(batter_name = iconv(batter_name, "ASCII//TRANSLIT"))
+  filter(abs >= 250) |> 
+  mutate(batter_name = stri_trans_general(batter_name, "Latin-ASCII"))
 
-quality_abs[ ,1] = iconv(quality_abs[, 1], "ASCII//TRANSLIT")
+
+quality_abs$batter_name = gsub(" Jr.", "", quality_abs$batter_name)
 ```
 
 
@@ -53,7 +57,7 @@ players = Batting |>
     OBP = round(((H + BB + HBP) / (AB + BB + HBP + SF)), digits = 3),
     SLG = round(((X1B + (2 * X2B) + (3 * X3B) + (4 * HR)) / AB), digits = 3),
     OPS = OBP + SLG) |> 
-  filter(AB >= 100) |> 
+  filter(AB >= 200) |> 
   select(playerID, yearID, AB, OBP, SLG, OPS) |> 
   ungroup()
 
@@ -63,7 +67,7 @@ names = People |>
   select(playerID, batter_name)
 
 
-players2 = players |> 
+players = players |> 
   left_join(names, by = "playerID") |> 
   mutate(game_year = yearID) |> 
   select(batter_name, game_year, AB, OBP, SLG, OPS)
@@ -74,10 +78,89 @@ players2 = players |>
 
 ```{r}
 quality_abs2 = quality_abs |> 
-  left_join(players2, by = c("batter_name", "game_year")) |> 
+  left_join(players, by = c("batter_name", "game_year")) |> 
   select(-AB)
+```
 
 
+```{r}
+library(ggplot2)
+
+m1 = lm(OBP ~ `%`, data = quality_abs2)
+
+dat_aug1 = augment(m1, data = quality_abs2)
+
+base_plot = ggplot(dat_aug1, aes(x = `%`, y = OBP)) + 
+        geom_point(alpha = 0.2) + 
+        geom_smooth(method = "lm", col = "red") +
+        geom_hline(yintercept = 0, linetype = 3) + 
+        xlab("Quality AB %") + ylab("OBP")
+
+highlight = dat_aug1 %>% 
+        arrange(desc(abs(.resid))) %>% 
+        head(10)
+
+base_plot + 
+  geom_point(data = highlight, color = "blue") + 
+  geom_text_repel(data = highlight, color = "blue", 
+                  aes(label = paste(batter_name, OBP)))
+```
+
+
+
+
+```{r}
+m2 = lm(SLG ~ `%`, data = quality_abs2)
+
+dat_aug2 = augment(m2, data = quality_abs2)
+
+base_plot = ggplot(dat_aug2, aes(x = `%`, y = SLG)) + 
+        geom_point(alpha = 0.2) + 
+        geom_smooth(method = "lm", col = "red") +
+        geom_hline(yintercept = 0, linetype = 3) + 
+        xlab("Quality AB %") + ylab("SLG")
+
+highlight = dat_aug2 %>% 
+        arrange(desc(abs(.resid))) %>% 
+        head(10)
+
+base_plot + 
+  geom_point(data = highlight, color = "blue") + 
+  geom_text_repel(data = highlight, color = "blue", 
+                  aes(label = paste(batter_name, SLG)))
+```
+
+
+
+
+
+
+```{r}
+m3 = lm(OPS ~ `%`, data = quality_abs2)
+
+dat_aug3 = augment(m3, data = quality_abs2)
+
+base_plot = ggplot(dat_aug3, aes(x = `%`, y = OPS)) + 
+        geom_point(alpha = 0.2) + 
+        geom_smooth(method = "lm", col = "red") +
+        geom_hline(yintercept = 0, linetype = 3) + 
+        xlab("Quality AB %") + ylab("OPS")
+
+highlight = dat_aug3 %>% 
+        arrange(desc(abs(.resid))) %>% 
+        head(10)
+
+base_plot + 
+  geom_point(data = highlight, color = "blue") + 
+  geom_text_repel(data = highlight, color = "blue", 
+                  aes(label = paste(batter_name, OPS)))
+```
+
+
+```{r}
+cor(quality_abs2$`%`, quality_abs2$OBP)
+cor(quality_abs2$`%`, quality_abs2$SLG)
+cor(quality_abs2$`%`, quality_abs2$OPS)
 ```
 
 
