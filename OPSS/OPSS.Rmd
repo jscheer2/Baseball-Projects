@@ -1,0 +1,65 @@
+---
+title: "OPSS"
+author: "Jason Scheer"
+date: "2024-07-11"
+output: pdf_document
+---
+
+
+In Baseball the most common advanced metric to use to measure offensive value is OPS (On-Base Plus Slugging) or OPS+ and it seeks to show the value of a hitter at the plate by taking their OBP (On-Base Percentage) and their SLG (Slugging Percentage) and combining them together to combine the 2 most important parts of being a hitter: getting on base and how many bases they get when they get a hit. I think it's a good statistic to use to get general offensive value, but I think there is one key element missing from this offensive value: Stolen Bases. If you look at 2024 Elly De La Cruz and Salvador Perez, both have a similar OPS (as of 7/10/24). But should a single count the same for each of them? How about if I said that Elly has 45 SB and Perez has 0 SB. Shouldn't a single or a double mean more for Elly if he can just get an extra base? Why should a standup double and a single with a stolen base be viewed very differently. We should reward the double more than a single with a stolen base, but OPS was made to determine offensive performance and I think that another statistic should be made to, not punish those who don't steal, but to reward those who do by a certain factor. Let's take a look and see how we would do this.
+
+
+I have two different formulas to try this new statistic out. It can either increase by the difference of SB and CS and everyone, for the most part, will have their number increase or it can be one that takes run value of getting CS into account. My first formula is:
+
+
+OPS * ((AB + SB - CS) / AB)
+
+
+My second formula is:
+
+
+OPS * (AB + 3(SB) - 4(CS) / AB)
+
+
+Both I think are good formulas, I think it more depends on what the difference between players will be and if either will favor speedsters too much
+
+```{r}
+# Took Lahman's 2023 hitting data and filtered into combined stints, only show players with at least 1 AB from the 2023 season
+library(readr)
+library(dplyr)
+library(stringi)
+library(tidyr)
+batting_2023 = read_csv("batting_2023.csv", show_col_types = FALSE)
+batting_2023 = batting_2023 |> 
+  filter(AB >= (3.1 * G)) |>  # Qualified Players
+  filter(AB >= 50) # Arbitrary number to ger rid of outlier hitters
+```
+
+
+```{r}
+# Get names of every player so looking at names will be easier later
+People = read_csv("~/Desktop/lahman_1871-2023_csv/lahman_1871-2023_csv/People.csv", show_col_types = FALSE)
+names = People |> 
+  mutate(Name = paste(nameFirst, nameLast)) |> 
+  mutate(Name = stri_trans_general(Name, "Latin-ASCII")) |> 
+  select(c(playerID, Name))
+
+# Combine data frames to get Names into Batting stats
+batting_2023 = batting_2023 |> 
+  left_join(names, by = "playerID") |> 
+  select(c("playerID", "Name", "G", "AB", "R", "H", "2B", "3B", "HR", "RBI", "SB", "CS", "BB", "SO", "IBB", "HBP", "SH", "SF", "GIDP"))
+```
+
+
+
+```{r}
+batting_2023 = batting_2023 |> 
+  mutate(`1B` = (H - `2B` - `3B` - HR)) |> 
+  replace_na(list(HBP = 0, SF = 0)) |> 
+  mutate(
+    OBP = round(((H + BB + HBP) / (AB + BB + HBP + SF)), digits = 3),
+    SLG = round(((`1B` + (2 * `2B`) + (3 * `3B`) + (4 * HR)) / AB), digits = 3),
+    OPS = OBP + SLG)
+```
+
+
