@@ -1,0 +1,121 @@
+---
+title: "Dustin Pedroia"
+author: "Jason Scheer"
+date: "2024-06-18"
+output: html_document
+---
+
+
+[Go over what some of these stats are]
+
+
+
+Let's look into Dustin Pedroia's carrer stats and accolades to start off:
+
+Rookie of the Year
+MVP
+4x All Star
+2x World Series
+4x Gold Glover
+Silver Slugger
+Wilson Overal Defensive Player of the Year
+51.9 WAR
+41.0 WAR7
+46.5 JAWS
+1805 Hits
+140 HR
+922 R
+725 RBI
+138 SB
+.299 Career BA
+.365 Career OBP
+.439 Career SLG
+.805 Career OBP
+113 Career OPS+
+
+
+Overall an amazing career, and borderline Hall of Fame career but in my opinion he should be in the Hall of Fame. 
+
+
+
+Some similar players to Dustin Pedroia: Jose Altuve, Kirby Puckett, and Joey Votto. These 3 are viewed are either already a Hall of Famer or generally agreed that they will be in the Hall of Fame (assuming scandals don't derail Altuve). Here are the career stats and accolades for these 3 players:
+
+
+Jose Altuve: 
+
+MVP
+8x All Star
+2x World Series
+1x Gold Glover
+6x Silver Slugger
+3x Batting Title
+51.6 WAR
+39.8 WAR7
+45.7 JAWS
+2134 Hits
+220 HR
+1104 R
+776 RBI
+303 SB
+.307 Career BA
+.363 Career OBP
+.470 Career SLG
+.833 Career OPS
+129 Career OPS+
+
+
+
+Kirby Puckett:
+
+HOF
+10x All Star
+2x World Series
+6x Gold Glover
+6x Silver Slugger
+Batting Title
+All Star Game MVP
+51.1 WAR
+37.7 WAR7
+44.4 JAWS
+2304 Hits
+207 HR
+1071 R
+1085 RBI
+134 SB
+.318 Career BA
+.360 Career OBP
+.477 Career SLG
+.837 Career OPS
+124 Career OPS+
+
+
+
+Joey Votto:
+
+MVP
+6x All Star
+1x Gold Glover
+64.5 WAR
+46.9 WAR7
+55.7 JAWS
+2135 Hits
+356 HR
+1171 R
+1144 RBI
+SB 80
+.294 Career BA
+.409 Career OBP
+.511 Career SLG
+.920 Career OPS
+144 Career OPS+
+
+
+
+```{r}
+library(ggplot2)
+
+```
+
+
+
+

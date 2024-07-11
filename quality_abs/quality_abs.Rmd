@@ -6,15 +6,21 @@ output: pdf_document
 ---
 
 
+I want to look into here how valuable having Quality At-Bats are. Quality At-Bats for clarification is anytime a batter: gets a hit, walks, gets hit by a pitch, sacrifices by bunt or flyball, hits a ball hard, or has 7+ pitches in his at-bat. I will classify a hard hit ball as 95+ mph on the exit velocity (launch speed). I think an underrated part of batting is being able to get deep into at-bats. The success rate of at-bats has extensive support to show that getting hits or walking always goes up with pitch count because the batter simultaneously learns how the pitchers' pitches move and also the more pitches the pitcher throws, the more frustrated he'll get and become more likely to throw bad pitches or balls that'll turn into walks. My main interest is to see which hitters in the league will show up as a surprise in quality at bats. Because you'll always have the Ohtani's and Trout's up there, but I'm interested to see which non-superstars are going to show up high on this list.
+
+
 ```{r}
+# Downloaded necessary packages
 library(readr)
 library(dplyr)
 library(stringi)
 library(tidyr)
 library(Lahman)
 
+# Import statcast data from 2017-2022 of batters and only bring in the outcome of each at-bat
 pas = read.csv("~/Desktop/baseball/Baseball-Projects/quality_abs/pas.csv")
 
+# create the quality ab variable
 pa = pas |> 
   mutate(quality_ab = ifelse(events == "single" | events == "double" |events == "triple" | events == "home_run" | events == "walk" | events == "hit_by_pitch" | events == "sac_fly" | events == "sac_bunt" | launch_speed >= 95 | pitch_number >= 7, 1, 0))
 ```
@@ -23,13 +29,14 @@ pa = pas |>
 
 
 ```{r}
+# Calculate the ABs, Quality ABs and % of Quality ABs that each player had
 quality_abs = pa |> 
   group_by(batter_name, game_year) |> 
   summarise(abs = n(), 
             quality_abs = sum(quality_ab, na.rm = TRUE), 
             `%` = round(quality_abs / abs * 100, digits = 2) , .groups = "keep") |> 
   filter(abs >= 250) |> 
-  mutate(batter_name = stri_trans_general(batter_name, "Latin-ASCII"))
+  mutate(batter_name = stri_trans_general(batter_name, "Latin-ASCII")) # Going to combine two databases so this will help get names to match up
 
 
 quality_abs$batter_name = gsub(" Jr.", "", quality_abs$batter_name)
@@ -38,6 +45,7 @@ quality_abs$batter_name = gsub(" Jr.", "", quality_abs$batter_name)
 
 
 ```{r}
+# Calculate eeach hitters OBP, SLG, and OPS
 players = Batting |> 
   filter(yearID >= 2017) |> 
   mutate(X1B = (H - X2B - X3B - HR)) |> 
@@ -57,7 +65,7 @@ players = Batting |>
     OBP = round(((H + BB + HBP) / (AB + BB + HBP + SF)), digits = 3),
     SLG = round(((X1B + (2 * X2B) + (3 * X3B) + (4 * HR)) / AB), digits = 3),
     OPS = OBP + SLG) |> 
-  filter(AB >= 200) |> 
+  filter(AB >= 200) |> # Arbitrary number to get only players who played at least a good chunk of a season
   select(playerID, yearID, AB, OBP, SLG, OPS) |> 
   ungroup()
 
