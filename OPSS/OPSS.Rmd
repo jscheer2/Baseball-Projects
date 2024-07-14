@@ -24,15 +24,17 @@ OPS * (AB + 3(SB) - 4(CS) / AB)
 Both I think are good formulas, I think it more depends on what the difference between players will be and if either will favor speedsters too much
 
 ```{r}
-# Took Lahman's 2023 hitting data and filtered into combined stints, only show players with at least 1 AB from the 2023 season
 library(readr)
 library(dplyr)
 library(stringi)
 library(tidyr)
-batting_2023 = read_csv("batting_2023.csv", show_col_types = FALSE)
-batting_2023 = batting_2023 |> 
-  filter(AB >= (3.1 * G)) |>  # Qualified Players
-  filter(AB >= 50) # Arbitrary number to ger rid of outlier hitters
+
+Batting <- read_csv("~/Desktop/lahman_1871-2023_csv/lahman_1871-2023_csv/Batting.csv", show_col_types = FALSE)
+batting_2023 = Batting |> 
+  filter(yearID == '2023') |> 
+  filter(G_batting > 0) |> 
+  filter(AB >= 50) |> # Arbitrary number to get rid of players who will skew data
+  filter(AB >= (3.1 * G)) # Qualified Batters only
 ```
 
 
@@ -44,15 +46,21 @@ names = People |>
   mutate(Name = stri_trans_general(Name, "Latin-ASCII")) |> 
   select(c(playerID, Name))
 
+# To keep this simple for OPS+ calculations, I'm only going to use a players' first team he played on
+batting_2023 = batting_2023 |> 
+  filter(stint == '1')
+
+
 # Combine data frames to get Names into Batting stats
 batting_2023 = batting_2023 |> 
   left_join(names, by = "playerID") |> 
-  select(c("playerID", "Name", "G", "AB", "R", "H", "2B", "3B", "HR", "RBI", "SB", "CS", "BB", "SO", "IBB", "HBP", "SH", "SF", "GIDP"))
+  select(c("playerID", "Name", "teamID", "G", "AB", "R", "H", "2B", "3B", "HR", "RBI", "SB", "CS", "BB", "SO", "IBB", "HBP", "SH", "SF", "GIDP"))
 ```
 
 
 
 ```{r}
+# added variables to calculate AVG, SLG, and OPS
 batting_2023 = batting_2023 |> 
   mutate(`1B` = (H - `2B` - `3B` - HR)) |> 
   replace_na(list(HBP = 0, SF = 0)) |> 
@@ -62,4 +70,54 @@ batting_2023 = batting_2023 |>
     OPS = OBP + SLG)
 ```
 
+
+Now that we have OPS for each player, let's try adding our two OPSS calculations. I'll call OPSS1 and OPSS2 respectively along with adding OPS+, OPSS1+, and OPSS2+
+
+To calculate OPS, I will be using 0.734 OPS as the league average (via baseball reference) and park factors from Baseball Savant
+
+
+```{r}
+park_factors = data.frame(
+  teamID = c("COL", "BOS", "CIN", "KCA", "WAS", "TEX", "PIT", "ATL", "CHN", "PHI", "BAL", "ARI", "MIN", "LAA", "TOR", "HOU", "CHA", "SLN", "LAN", "NYA", "MIA", "SFN", "DET", "CLE", "MIL", "NYN", "TBA", "OAK", "SDN", "SEA"),
+  park_factor = c(112, 108, 107, 104, 103, 102, 101, 101, 101, 101, 101, 100, 100, 100, 100, 100, 100, 99, 99, 98, 98, 97, 97, 97, 97, 96, 96, 96, 95, 92)
+)
+
+batting_2023 = batting_2023 |> 
+  left_join(park_factors, by = "teamID")
+
+batting_2023 = batting_2023 |> 
+  mutate(`OPS+` = round( 10000 * (OPS / 0.734) / park_factor, digits = 0 ) ) |> 
+  select(c("Name", "teamID", "park_factor", "G", "AB", "SB", "CS", "OBP", "SLG", "OPS", "OPS+")) |> 
+  arrange(desc(`OPS+`))
+
+head(batting_2023, n = 10)
+```
+
+
+Now it's time to add each formulas and then the '+' of each formula once I find the league average for each
+
+OPS * ((AB + SB - CS) / AB)
+
+OPS * (AB + 3(SB) - 4(CS) / AB)
+
+
+```{r}
+opss = batting_2023 |> 
+  mutate(OPSS1 = round(OPS * ((AB + SB - CS) / AB), digits = 3)) |> 
+  mutate(OPSS2 = round(OPS * ((AB + (3 * SB) - (4 *CS)) / AB), digits = 3))
+
+avg_opss1 = round(mean(opss$OPSS1), digits = 3)
+avg_opss1
+avg_opss2 = round(mean(opss$OPSS2), digits = 3)
+avg_opss2
+```
+
+
+
+```{r}
+opss = opss |> 
+  mutate(`OPSS1+` = round( 10000 * (OPS / avg_opss1) / park_factor, digits = 0 ) ) |>
+  mutate(`OPSS2+` = round( 10000 * (OPS / avg_opss2) / park_factor, digits = 0 ) ) |> 
+  select(c("Name", "teamID", "park_factor", "G", "AB", "SB", "CS", "OBP", "SLG", "OPS", "OPS+", "OPSS1", "OPSS1+", "OPSS2", "OPSS2+"))
+```
 
