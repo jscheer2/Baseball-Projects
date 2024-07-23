@@ -1,0 +1,58 @@
+---
+title: "Mariners vs Giants"
+author: "Jason Scheer"
+date: "2024-07-23"
+output: pdf_document
+---
+
+So for this project I want to write up a scouting report for a game. In this example I'm choosing two teams that I had randomly picked in the Mariners and Giants. So now that we have the teams, it's now time to decide the lineups and the pitchers. For the pitchers, I'm going to get a random number from 1 to 5 and that'll decide the order based on GS (as of 7/22/24) for SPs only (excluding Erik Miller). And for the sake of this exercise, it will be Giants at Mariners. 
+
+
+```{r}
+set.seed(2024)
+giants_sp = sample(1:5, 1)
+mariners_sp = sample(1:5, 1)
+giants_sp
+mariners_sp
+```
+
+
+So the Starting Pitchers will be Jordan Hicks and Bryan Woo. Lineups will be determined off of player usage against RHPs since both pitchers are rightys. The Mariners' and Giants' lineup will be:
+
+```{r}
+mariners_lineup = data.frame(
+  C = "Cal Raleigh",
+  `1B` = "Ty France",
+  `2B` = "Jorge Polanco", 
+  `3B` = "Josh Rojas",
+  SS = "J. P. Crawford",
+  LF = "Luke Raley",
+  CF = "Julio Rodriguez",
+  RF = "Mitch Haniger"
+)
+
+giants_lineup = data.frame(
+  C = "Patrick Bailey",
+  `1B` = "Wilmer Flores",
+  `2B` = "Thairo Estrada",
+  `3B` = "Matt Chapman",
+  SS = "Brett Wisley",
+  LF = "Michael Conforto",
+  CF = "Heliot Ramos", 
+  RF = "Mike Yastrzemski"
+)
+```
+
+
+Now it's time to import Jordan Hicks' statistics against both L and R batters.
+
+
+```{r}
+library(dplyr)
+library(readr)
+jordan_hicks_righty <- read_csv("jordan_hicks_righty.csv", show_col_types = FALSE)
+jordan_hicks_lefty <- read_csv("jordan_hicks_lefty.csv", show_col_types = FALSE)
+jordan_hicks = merge(jordan_hicks_lefty, jordan_hicks_righty, by = "player_id")
+  
+```
+

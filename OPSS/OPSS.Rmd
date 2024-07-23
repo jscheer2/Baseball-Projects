@@ -67,6 +67,7 @@ batting_2023 = batting_2023 |>
   mutate(
     OBP = round(((H + BB + HBP) / (AB + BB + HBP + SF)), digits = 3),
     SLG = round(((`1B` + (2 * `2B`) + (3 * `3B`) + (4 * HR)) / AB), digits = 3),
+    SLG_3 = round(((SB + (-1.5 * CS) + `1B` + (2 * `2B`) + (3 * `3B`) + (4 * HR)) / AB), digits = 3), 
     OPS = OBP + SLG)
 ```
 
@@ -87,7 +88,6 @@ batting_2023 = batting_2023 |>
 
 batting_2023 = batting_2023 |> 
   mutate(`OPS+` = round( 10000 * (OPS / 0.734) / park_factor, digits = 0 ) ) |> 
-  select(c("Name", "teamID", "park_factor", "G", "AB", "SB", "CS", "OBP", "SLG", "OPS", "OPS+")) |> 
   arrange(desc(`OPS+`))
 
 head(batting_2023, n = 10)
@@ -104,12 +104,15 @@ OPS * (AB + 3(SB) - 4(CS) / AB)
 ```{r}
 opss = batting_2023 |> 
   mutate(OPSS1 = round(OPS * ((AB + SB - CS) / AB), digits = 3)) |> 
-  mutate(OPSS2 = round(OPS * ((AB + (3 * SB) - (4 *CS)) / AB), digits = 3))
+  mutate(OPSS2 = round(OPS * ((AB + (3 * SB) - (4 *CS)) / AB), digits = 3)) |> 
+  mutate(OPSS3 = round(OBP + SLG_3, digits = 3))
 
 avg_opss1 = round(mean(opss$OPSS1), digits = 3)
 avg_opss1
 avg_opss2 = round(mean(opss$OPSS2), digits = 3)
 avg_opss2
+avg_opss3 = round(mean(opss$OPSS3), digits = 3)
+avg_opss3
 ```
 
 
@@ -118,7 +121,8 @@ avg_opss2
 opss = opss |> 
   mutate(`OPSS1+` = round( 10000 * (OPSS1 / avg_opss1) / park_factor, digits = 0 ) ) |>
   mutate(`OPSS2+` = round( 10000 * (OPSS2 / avg_opss2) / park_factor, digits = 0 ) ) |> 
-  select(c("Name", "teamID", "park_factor", "G", "AB", "SB", "CS", "OBP", "SLG", "OPS", "OPS+", "OPSS1", "OPSS1+", "OPSS2", "OPSS2+"))
+  mutate(`OPSS3+` = round( 10000 * (OPSS3 / avg_opss3) / park_factor, digits = 0 ) ) |> 
+  select(c("Name", "teamID", "park_factor", "G", "AB", "SB", "CS", "OBP", "SLG", "OPS", "OPS+", "OPSS1", "OPSS1+", "OPSS2", "OPSS2+", "OPSS3", "OPSS3+"))
 
 head(opss, n = 10)
 ```
@@ -147,6 +151,17 @@ head(opss2, n = 10)
 ```
 
 Here are the top 10 for OPSS2+: Acuna, Ohtani, Freeman, Carroll, Judge, Betts, Schneider, Lowe, Soto, and Seager
+
+
+
+```{r}
+opss3 = opss |> 
+  arrange(desc(`OPSS3+`))
+
+head(opss3, n = 10)
+```
+
+
 
 
 
@@ -179,6 +194,14 @@ head(opss2, n = 10)
 ```
 
 
+```{r}
+opss3 = opss3 |> 
+  arrange(`OPSS3+`)
+
+head(opss3, n = 10)
+```
+
+
 The bottom 10 look relatively the same. We see about the same amount of variance in OPSS1+ and OPSS2+. I'm really interested to see how the average player is affected by each variable.
 
 
@@ -186,6 +209,7 @@ The bottom 10 look relatively the same. We see about the same amount of variance
 median(opss$`OPS+`)
 median(opss$`OPSS1+`)
 median(opss$`OPSS2+`)
+median(opss$`OPSS3+`)
 ```
 
 
@@ -200,12 +224,16 @@ opss1_mean = mean(opss$`OPSS1+`, na.rm = TRUE)
 opss1_mean
 opss2_mean = mean(opss$`OPSS2+`, na.rm = TRUE)
 opss2_mean
+opss3_mean = mean(opss$`OPSS3+`, na.rm = TRUE)
+opss3_mean
 ops_sd = sd(opss$`OPS+`, na.rm = TRUE)
 ops_sd
 opss1_sd = sd(opss$`OPSS1+`, na.rm = TRUE)
 opss1_sd
 opss2_sd = sd(opss$`OPSS2+`, na.rm = TRUE)
 opss2_sd
+opss3_sd = sd(opss$`OPSS3+`, na.rm = TRUE)
+opss3_sd
 ```
 
 
@@ -225,6 +253,12 @@ cat("
 # 66% and 95% of players deviation for OPS+
 c(opss2_mean - opss2_sd, opss2_mean + opss2_sd)
 c(opss2_mean - (2 * opss2_sd), opss2_mean + (2 * opss2_sd))
+
+cat("
+")
+# 66% and 95% of players deviation for OPS+
+c(opss3_mean - opss3_sd, opss3_mean + opss3_sd)
+c(opss3_mean - (2 * opss3_sd), opss3_mean + (2 * opss3_sd))
 ```
 
 Here we can see the comparisons of the means and standard deviations to see where 66% and 95% of batters lie between and see how they differ. Each statistic increased in range on the low end while OPSS1+ is shorter than the other two on the high end meaning that there isn't as many high end players in OPSS1+ as OPS+ and OPSS2+
@@ -238,7 +272,8 @@ Lastly I want to look into how OPSS1+ and OPSS2+ differ from OPS+ from each play
 ```{r}
 opss = opss |> 
   mutate(`OPSS1+_diff` = abs(`OPS+` - `OPSS1+`)) |> 
-  mutate(`OPSS2+_diff` = abs(`OPS+` - `OPSS2+`))
+  mutate(`OPSS2+_diff` = abs(`OPS+` - `OPSS2+`)) |> 
+  mutate(`OPSS3+_diff` = abs(`OPS+` - `OPSS3+`))
 
 opss1 = opss |> 
   arrange(desc(`OPSS1+_diff`))
@@ -253,6 +288,17 @@ opss2 = opss |>
 
 head(opss2, n = 15)
 ```
+
+
+```{r}
+opss3 = opss |> 
+  arrange(desc(`OPSS3+_diff`))
+
+head(opss3, n = 15)
+```
+
+
+
 
 
 Now this is, to me, the most interesting thing to look at. Here it shows the absolute value difference in OPS+ to OPSS1+ and OPSS2+ and this is where we see the biggest difference between these 3 variables. In OPSS1+ you see some big differences in 7 and 6, but not too much big differences, but OPSS2+ is where we see the biggest of differences. 4 players with over 20 differential which means this stat made those 20% better/worse than they were with OPS+. This is where the decision between models for OPSS is made. Depending on how much you want stolen bases to affect their offensive metric, you can have it impact it a little bit but not differ a ton or you have it mean a decent amount with a few huge outliers, but most still having a bigger affects than OPSS1+ by a mile. 

@@ -1,0 +1,5 @@
+﻿pitch_type,pitches,player_id,player_name,total_pitches,pitch_percent,ba,iso,babip,slg,woba,xwoba,xba,hits,abs,launch_speed,launch_angle,spin_rate,velocity,effective_speed,whiffs,swings,takes,eff_min_vel,release_extension,pos3_int_start_distance,pos4_int_start_distance,pos5_int_start_distance,pos6_int_start_distance,pos7_int_start_distance,pos8_int_start_distance,pos9_int_start_distance,pitcher_run_exp,run_exp,bat_speed,swing_length
+SI,157,663855,"Hicks, Jordan",785,20,0.4,0.167,0.379,0.567,0.482,0.56,0.441,12,30,93.4,9,1959,94.7,95.12,7,61,96,0.4,6.54,117,146,111,151,287,325,303,-5.1,5.1,70.44972926,6.95369
+FS,95,663855,"Hicks, Jordan",785,12.1,0.091,0,0.167,0.091,0.193,0.312,0.209,2,22,81.8,13.5,928,84.6,85.02,20,46,49,0.4,6.52,115,145,116,151,286,325,303,3.7,-3.7,69.98103114,7.876407045
+ST,75,663855,"Hicks, Jordan",785,9.6,0.1,0,0.2,0.1,0.316,0.33,0.118,1,10,81.9,19.2,2258,81,81.16,9,28,47,0.2,6.37,115,144,111,150,290,325,303,-1.1,1.1,71.24559037,8.072869259
+FF,39,663855,"Hicks, Jordan",785,5,0.25,0,0.4,0.25,0.318,0.389,0.311,2,8,82.1,27.4,2190,96.3,96.5,3,15,24,0.2,6.52,113,146,112,150,284,318,301,0,0,57.760285,5.513631

@@ -1,0 +1,5 @@
+﻿pitch_type,pitches,player_id,player_name,total_pitches,pitch_percent,ba,iso,babip,slg,woba,xwoba,xba,hits,abs,launch_speed,launch_angle,spin_rate,velocity,effective_speed,whiffs,swings,takes,eff_min_vel,release_extension,pos3_int_start_distance,pos4_int_start_distance,pos5_int_start_distance,pos6_int_start_distance,pos7_int_start_distance,pos8_int_start_distance,pos9_int_start_distance,pitcher_run_exp,run_exp,bat_speed,swing_length
+FF,175,682243,"Miller, Bryce",712,24.6,0.171,0.086,0.227,0.257,0.225,0.296,0.201,6,35,94.4,27,2452,94.9,94.97,39,107,68,0.1,6.35,107,152,117,146,300,322,287,2.1,-2.1,70.67927311,7.046950291
+SI,110,682243,"Miller, Bryce",712,15.4,0.258,0.065,0.364,0.323,0.279,0.266,0.241,8,31,90.8,-3.1,2378,94.5,94.76,8,46,64,0.3,6.38,106,152,117,146,300,321,286,1.2,-1.2,70.37050907,7.095850465
+ST,44,682243,"Miller, Bryce",712,6.2,0.091,0.091,0.111,0.182,0.114,0.179,0.156,1,11,87.3,28.4,2233,82,81.97,3,16,28,0,6.35,107,150,117,145,300,322,287,1.3,-1.3,68.45213067,7.708331333
+FS,43,682243,"Miller, Bryce",712,6,0.154,0,0.333,0.154,0.136,0.192,0.18,2,13,73,7.3,854,83.9,84.13,8,25,18,0.2,6.51,107,151,120,145,298,322,287,0.5,-0.5,67.47108,7.535229524
