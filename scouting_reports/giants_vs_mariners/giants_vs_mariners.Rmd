@@ -50,8 +50,10 @@ Now it's time to import Jordan Hicks' statistics against both L and R batters.
 ```{r}
 library(dplyr)
 library(readr)
-jordan_hicks_righty <- read_csv("jordan_hicks_righty.csv", show_col_types = FALSE)
-jordan_hicks_lefty <- read_csv("jordan_hicks_lefty.csv", show_col_types = FALSE)
+jordan_hicks_righty = read_csv("jordan_hicks_righty.csv", show_col_types = FALSE) |> 
+  mutate(Hand = "Right")
+jordan_hicks_lefty = read_csv("jordan_hicks_lefty.csv", show_col_types = FALSE)|> 
+  mutate(Hand = "Left")
 jordan_hicks = merge(jordan_hicks_lefty, jordan_hicks_righty, by = "player_id")
   
 ```
