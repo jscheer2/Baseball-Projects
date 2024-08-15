@@ -28,7 +28,8 @@ mariners_lineup = data.frame(
   SS = "J. P. Crawford",
   LF = "Luke Raley",
   CF = "Julio Rodriguez",
-  RF = "Mitch Haniger"
+  RF = "Mitch Haniger",
+  DH = "Mitch Garver"
 )
 
 giants_lineup = data.frame(
@@ -39,7 +40,8 @@ giants_lineup = data.frame(
   SS = "Brett Wisley",
   LF = "Michael Conforto",
   CF = "Heliot Ramos", 
-  RF = "Mike Yastrzemski"
+  RF = "Mike Yastrzemski",
+  DH = "Mark Canha"
 )
 ```
 
@@ -51,10 +53,166 @@ Now it's time to import Jordan Hicks' statistics against both L and R batters.
 library(dplyr)
 library(readr)
 jordan_hicks_righty = read_csv("jordan_hicks_righty.csv", show_col_types = FALSE) |> 
-  mutate(Hand = "Right")
+  mutate(Hand = "Right") |> 
+    mutate(`pitch %` = round((pitches / 424) * 100, digits = 1)) # fixing pitch % since total pitches was done without home and away difference
 jordan_hicks_lefty = read_csv("jordan_hicks_lefty.csv", show_col_types = FALSE)|> 
-  mutate(Hand = "Left")
-jordan_hicks = merge(jordan_hicks_lefty, jordan_hicks_righty, by = "player_id")
-  
+  mutate(Hand = "Left") |> 
+  mutate(`pitch %` = round((pitches / 366) * 100, digits = 1)) # fixing pitch % since total pitches was done without home and away difference. Will fix this for batters.
+# Made a mistake in column name
+colnames(jordan_hicks_righty)[1] = "pitch_type"
+jordan_hicks = bind_rows(jordan_hicks_lefty, jordan_hicks_righty) |> 
+  select(c(player_name, pitch_type, Hand, pitches, `pitch %`, abs, hits, ba, slg, xba, xwoba, launch_speed, launch_angle, pitcher_run_exp))
+
+
+bryce_miller_righty = read_csv("bryce_miller_righty.csv", show_col_types = FALSE) |> 
+  mutate(Hand = "Right") |> 
+  mutate(`pitch %` = round((pitches / 372) * 100, digits = 1)) |> 
+  select(c(player_name, pitch_type, Hand, pitches, `pitch %`, abs, hits, ba, slg, xba, xwoba, launch_speed, launch_angle, pitcher_run_exp))
+bryce_miller_lefty = read_csv("bryce_miller_lefty.csv", show_col_types = FALSE)|> 
+  mutate(Hand = "Left") |>   
+  mutate(`pitch %` = round((pitches / 439) * 100, digits = 1)) |> 
+  select(c(player_name, pitch_type, Hand, pitches, `pitch %`, abs, hits, ba, slg, xba, xwoba, launch_speed, launch_angle, pitcher_run_exp))
+bryce_miller = bind_rows(bryce_miller_lefty, bryce_miller_righty)
 ```
 
+
+
+So now that we have all of our pitching data for Bryce Miller as a home pitcher and Jordan Hicks as an away pitcher, time to get data for the batters for each team. I unfortunately had to take a break since I got the pitcher data off of baseball savant, so instead of painstakingly going through every appearance and taking away everything from 7/31 to 7/22, I'm just going to leave batter data until the end of July. A hitter will need a minimum of 10 pitches of each type to be counted just since anything less and it's not a good sample size.
+
+
+
+```{r}
+mariners_batters = read_csv("mariners_batters.csv", show_col_types = FALSE) |> 
+  arrange(player_name) |> 
+  select(c("player_name", "pitch_type", "pitches", "pitch_percent", "hits", "abs", "ba", "xba", "slg", "xwoba", "launch_speed", "launch_angle", "run_exp"))
+giants_batters = read_csv("giants_batters.csv", show_col_types = FALSE) |> 
+  arrange(player_name) |> 
+  select(c("player_name", "pitch_type", "pitches", "pitch_percent", "hits", "abs", "ba", "xba", "slg", "xwoba", "launch_speed", "launch_angle", "run_exp"))
+```
+
+
+
+Now let's take this batter data and only include the pitches that each pitchers throws
+
+
+```{r}
+unique(bryce_miller$pitch_type)
+unique(jordan_hicks$pitch_type)
+```
+
+
+```{r}
+mariners_batters = mariners_batters |> 
+  filter(pitch_type == "SI" | pitch_type == "FS" | pitch_type == "ST" | pitch_type == "FF")
+giants_batters = giants_batters |> 
+  filter(pitch_type == "SI" | pitch_type == "FS" | pitch_type == "ST" | pitch_type == "FF")
+```
+
+Let's take a look at what each batter for each team and pretend I'm working with the hitters and not the pitchers, starting with the Mariners lineup
+
+
+```{r}
+jordan_hicks
+```
+
+
+
+First up J.P. Crawford (L)
+
+```{r}
+mariners_batters |> 
+  filter(player_name == "Crawford, J.P.")
+```
+
+Since Hicks throws a lot of sinkers and split finger to lefties, he should expect to see mainly those two pitches and an occasional sweeper. Looking at his xba and xwoba, he should sit sinker and take the sweeper because he doesn't have good stats off that pitch.
+
+
+
+Next let's look at Ty France (R)
+
+```{r}
+mariners_batters |> 
+  filter(player_name == "France, Ty")
+```
+
+Hicks being a sinker and sweeper pitcher against righties is great for France as he excels against both of those pitches, but he hasn't seen really any split finger pitches so I'd expect Hicks to throw some his way even though he doesn't throw many to righties
+
+
+Next is Mitch Garver (R): 
+
+
+```{r}
+mariners_batters |> 
+  filter(player_name == "Garver, Mitch")
+```
+
+For Garver, he seems to not have a lot of ABs against righties, but has a good xwoba against the Sinker and doesn't hit/takes a lot of sweepers. I'd expect be wary of sweepers and the occasional split finger as he also hasn't seen it enough, but should be good against the sinker.
+
+
+Next is Mitch Haniger (R):
+
+```{r}
+mariners_batters |> 
+  filter(player_name == "Haniger, Mitch")
+```
+
+Haniger destorys righty sinkers so I'd expect Hicks to not throw it too frequently, be he even is good against the sweeper, so I'd expect Haniger to hit the ball well against him.
+
+
+
+Next is: Jorge Polanco (L):
+
+
+```{r}
+mariners_batters |> 
+  filter(player_name == "Polanco, Jorge")
+```
+
+Polanco hasn't really seen enough of his 3 main pitches against righties this year, but he has a very good xwoba and xba against the sinker. I'd expect some more split fingers and sweeper since he doesn't have good statistics in his limited pitches.
+
+
+
+Let's look at Cal Raleigh (L) next:
+
+
+```{r}
+mariners_batters |> 
+  filter(player_name == "Raleigh, Cal")
+```
+
+Cal doesn't seem to have that many sinkers and sweepers and has never even hit a righty sweeper yet by the looks of it, so I'd expect Hicks to throw some more sweepers. He also does well against the sinker so I'd sit that. He does alright at split finger.
+
+
+
+Luke Raley (L) is next: 
+
+
+```{r}
+mariners_batters |> 
+  filter(player_name == "Raley, Luke")
+```
+
+Raley with just looking at the expected statistics is fantastic at all 4 of his pitches, but has a limited sample size in his 3 main pitches. I'd expect a sweeper and split finger because he only has 3 combined hits against those and just has boosted expected stats.
+
+
+
+Next is Julio Rodriguez (R):
+
+
+```{r}
+mariners_batters |> 
+  filter(player_name == "Rodríguez, Julio")
+```
+
+Julio has been really bad at the sinker and hasn't hit a split finger in his low pitches seen. I'd expect to only see those pitches with his bad regular and expected statistics.
+
+
+
+Lastly is Josh Rojas (L):
+
+```{r}
+mariners_batters |> 
+  filter(player_name == "Rojas, Josh")
+```
+
+Rojas does well at hitting the Sinker and split finger in his limited pitches, but hasn't gotten a hit against the sweeper in his limited pitches, so he might see some sweeper but I'd try to take those and sit on his other pitches that he hits well.
